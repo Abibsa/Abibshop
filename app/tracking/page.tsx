@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { useOrderStore } from "@/lib/order-store"
 import { Button } from "@/components/ui/button"
@@ -11,7 +11,7 @@ import { Search, Package, Clock, CheckCircle, XCircle, Copy, Gift, ArrowRight } 
 import { motion, AnimatePresence } from "framer-motion"
 import Link from "next/link"
 
-export default function TrackingPage() {
+function TrackingContent() {
     const searchParams = useSearchParams()
     const [orderId, setOrderId] = useState("")
     const [searchedOrder, setSearchedOrder] = useState<any>(null)
@@ -235,5 +235,20 @@ export default function TrackingPage() {
                 </AnimatePresence>
             </div>
         </div>
+    )
+}
+
+export default function TrackingPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Loading...</p>
+                </div>
+            </div>
+        }>
+            <TrackingContent />
+        </Suspense>
     )
 }
