@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useState, useMemo } from "react"
+import Image from "next/image"
 import { useProductStore } from "@/lib/product-store"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -103,8 +104,20 @@ export default function ProductsPage() {
 
                             <CardHeader className="pb-2 md:pb-4 px-2 md:px-6 pt-2 md:pt-6">
                                 <div className="aspect-[4/3] md:aspect-square bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 rounded-md md:rounded-lg mb-1.5 md:mb-4 flex items-center justify-center text-muted-foreground relative overflow-hidden group-hover:scale-105 transition-transform">
-                                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 group-hover:from-blue-500/20 group-hover:to-purple-500/20 transition-all" />
-                                    <Sparkles className="h-5 w-5 md:h-10 md:w-10 lg:h-12 lg:w-12 text-primary relative z-10" />
+                                    {product.image ? (
+                                        <Image
+                                            src={product.image}
+                                            alt={product.name}
+                                            fill
+                                            className="object-cover"
+                                            sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                                        />
+                                    ) : (
+                                        <>
+                                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 group-hover:from-blue-500/20 group-hover:to-purple-500/20 transition-all" />
+                                            <Sparkles className="h-5 w-5 md:h-10 md:w-10 lg:h-12 lg:w-12 text-primary relative z-10" />
+                                        </>
+                                    )}
                                 </div>
                                 <CardTitle className="text-[11px] md:text-base lg:text-lg group-hover:text-primary transition-colors line-clamp-2 leading-tight mb-0.5">
                                     {product.name}
