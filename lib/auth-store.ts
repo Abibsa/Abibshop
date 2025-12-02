@@ -8,6 +8,7 @@ interface User {
     email: string
     name: string
     role: UserRole
+    whatsapp?: string
 }
 
 interface AuthStore {
@@ -19,8 +20,8 @@ interface AuthStore {
 
 // Mock users for demo
 const MOCK_USERS = [
-    { id: '1', email: 'admin@abibshop.com', password: 'admin123', name: 'Admin', role: 'admin' as UserRole },
-    { id: '2', email: 'user@example.com', password: 'user123', name: 'User Demo', role: 'user' as UserRole },
+    { id: '1', email: 'admin@abibshop.com', password: 'admin123', name: 'Admin', role: 'admin' as UserRole, whatsapp: '08122904742' },
+    { id: '2', email: 'user@example.com', password: 'user123', name: 'User Demo', role: 'user' as UserRole, whatsapp: '08123456789' },
 ]
 
 export const useAuthStore = create<AuthStore>()(
