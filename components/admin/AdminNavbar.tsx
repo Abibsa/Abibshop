@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { useAuthStore } from "@/lib/auth-store"
 import { useRouter } from "next/navigation"
+import { ModeToggle } from "@/components/mode-toggle"
 
 export default function AdminNavbar() {
     const pathname = usePathname()
@@ -74,8 +75,11 @@ export default function AdminNavbar() {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" className="text-muted-foreground">
-                        <Settings className="h-5 w-5" />
+                    <ModeToggle />
+                    <Button variant="ghost" size="icon" className="text-muted-foreground" asChild>
+                        <Link href="/settings">
+                            <Settings className="h-5 w-5" />
+                        </Link>
                     </Button>
                     <Button
                         variant="ghost"

@@ -1,11 +1,12 @@
 "use client"
 
 import Link from "next/link"
-import { ShoppingCart, Menu, User, LogOut, LayoutDashboard } from "lucide-react"
+import { ShoppingCart, Menu, User, LogOut, LayoutDashboard, Settings } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useAuthStore } from "@/lib/auth-store"
 import { useCartStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
+import { ModeToggle } from "@/components/mode-toggle"
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import {
     DropdownMenu,
@@ -79,6 +80,9 @@ export default function Navbar() {
                         </Link>
                     </Button>
 
+                    {/* Theme Toggle - Desktop */}
+                    <ModeToggle />
+
                     {/* User Menu - Desktop */}
                     {isAuthenticated && user ? (
                         <DropdownMenu>
@@ -110,6 +114,12 @@ export default function Navbar() {
                                         Pesanan Saya
                                     </Link>
                                 </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                    <Link href="/settings" className="cursor-pointer">
+                                        <Settings className="mr-2 h-4 w-4" />
+                                        Pengaturan
+                                    </Link>
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600">
                                     <LogOut className="mr-2 h-4 w-4" />
                                     Logout
@@ -139,6 +149,10 @@ export default function Navbar() {
                             )}
                         </Link>
                     </Button>
+
+
+                    {/* Theme Toggle - Mobile */}
+                    <ModeToggle />
 
                     {/* Hamburger Menu */}
                     {mounted && (
@@ -199,6 +213,16 @@ export default function Navbar() {
                                                     </Link>
                                                 </Button>
                                                 <Button
+                                                    variant="outline"
+                                                    className="w-full mb-2 justify-start h-9 text-sm"
+                                                    asChild
+                                                >
+                                                    <Link href="/settings" onClick={() => setIsOpen(false)}>
+                                                        <Settings className="mr-2 h-4 w-4" />
+                                                        Pengaturan
+                                                    </Link>
+                                                </Button>
+                                                <Button
                                                     variant="destructive"
                                                     className="w-full h-9 text-sm"
                                                     onClick={() => {
@@ -227,6 +251,6 @@ export default function Navbar() {
                     )}
                 </div>
             </div>
-        </nav>
+        </nav >
     )
 }

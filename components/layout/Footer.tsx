@@ -120,7 +120,7 @@ export default function Footer() {
                                         </Link>
                                     </li>
                                     <li>
-                                        <Link href="#" className="text-muted-foreground hover:text-primary transition-colors inline-flex items-center group">
+                                        <Link href="/faq" className="text-muted-foreground hover:text-primary transition-colors inline-flex items-center group">
                                             <span className="group-hover:translate-x-1 transition-transform">FAQ</span>
                                         </Link>
                                     </li>
