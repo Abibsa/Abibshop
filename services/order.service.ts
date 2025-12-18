@@ -154,6 +154,33 @@ export class OrderService {
     }
 
     /**
+     * Update order (Generic)
+     */
+    async updateOrder(id: string, updates: OrderUpdate) {
+        const { data, error } = await this.supabase
+            .from('orders')
+            .update(updates)
+            .eq('id', id)
+            .select()
+            .single()
+
+        if (error) throw error
+        return data as Order
+    }
+
+    /**
+     * Delete order
+     */
+    async deleteOrder(id: string) {
+        const { error } = await this.supabase
+            .from('orders')
+            .delete()
+            .eq('id', id)
+
+        if (error) throw error
+    }
+
+    /**
      * Get order logs
      */
     async getOrderLogs(orderId: string) {

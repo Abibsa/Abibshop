@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { useProductStore } from "@/lib/product-store"
+import { useState, useEffect } from "react"
+import { productService } from "@/services/product.service"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
@@ -24,7 +24,8 @@ import {
     MoreVertical,
     Trash2,
     Edit,
-    Tag
+    Tag,
+    Loader2
 } from "lucide-react"
 import {
     DropdownMenu,
@@ -34,82 +35,124 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { toast } from "sonner"
+import { Database } from "@/lib/supabase/database.types"
+
+type Product = Database['public']['Tables']['products']['Row']
 
 export default function ProductsManagement() {
+    const [products, setProducts] = useState<Product[]>([])
+    const [loading, setLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState("")
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
-    const [selectedProduct, setSelectedProduct] = useState<any>(null)
+    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
     const [formData, setFormData] = useState({
         name: "",
         price: 0,
         category: "",
         description: "",
-        image: "/images/robux.png",
-        stock: 0,
-        status: "active" as "active" | "low_stock" | "out_of_stock"
+        image_url: "/images/robux.png",
+        stock: 0
     })
 
-    const { products, updateProduct, deleteProduct, addProduct } = useProductStore()
+    const fetchProducts = async () => {
+        try {
+            const data = await productService.getProducts()
+            setProducts(data)
+        } catch (error) {
+            console.error("Failed to fetch products:", error)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    useEffect(() => {
+        fetchProducts()
+    }, [])
 
     const filteredProducts = products.filter(product =>
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         product.category.toLowerCase().includes(searchTerm.toLowerCase())
     )
 
-    const getStatusBadge = (status: string) => {
-        switch (status) {
-            case 'active':
-                return <Badge className="bg-green-500 hover:bg-green-600">Active</Badge>
-            case 'low_stock':
-                return <Badge className="bg-yellow-500 hover:bg-yellow-600">Low Stock</Badge>
-            case 'out_of_stock':
-                return <Badge variant="destructive">Out of Stock</Badge>
-            default:
-                return <Badge variant="outline">{status}</Badge>
+    const getStatusBadge = (stock: number) => {
+        if (stock > 10) {
+            return <Badge className="bg-green-500 hover:bg-green-600">Active</Badge>
+        } else if (stock > 0) {
+            return <Badge className="bg-yellow-500 hover:bg-yellow-600">Low Stock</Badge>
+        } else {
+            return <Badge variant="destructive">Out of Stock</Badge>
         }
     }
 
-    const handleEdit = (product: any) => {
+    const handleEdit = (product: Product) => {
         setSelectedProduct(product)
         setFormData({
             name: product.name,
             price: product.price,
             category: product.category,
-            description: product.description,
-            image: product.image,
-            stock: product.stock,
-            status: product.status
+            description: product.description || "",
+            image_url: product.image_url || "/images/robux.png",
+            stock: product.stock
         })
         setIsEditDialogOpen(true)
     }
 
-    const handleDelete = (id: string) => {
+    const handleDelete = async (id: string) => {
         if (confirm("Apakah Anda yakin ingin menghapus produk ini?")) {
-            deleteProduct(id)
+            try {
+                await productService.deleteProduct(id)
+                setProducts(products.filter(p => p.id !== id))
+                toast.success("Produk berhasil dihapus")
+            } catch (error) {
+                console.error("Error deleting product:", error)
+                toast.error("Gagal menghapus produk")
+            }
         }
     }
 
-    const handleSaveEdit = () => {
+    const handleSaveEdit = async () => {
         if (selectedProduct) {
-            updateProduct(selectedProduct.id, formData)
-            setIsEditDialogOpen(false)
-            setSelectedProduct(null)
+            try {
+                const updated = await productService.updateProduct(selectedProduct.id, formData)
+                setProducts(products.map(p => p.id === selectedProduct.id ? updated : p))
+                setIsEditDialogOpen(false)
+                setSelectedProduct(null)
+                toast.success("Produk berhasil diperbarui")
+            } catch (error) {
+                console.error("Error updating product:", error)
+                toast.error("Gagal memperbarui produk")
+            }
         }
     }
 
-    const handleAddProduct = () => {
-        addProduct(formData)
-        setIsAddDialogOpen(false)
-        setFormData({
-            name: "",
-            price: 0,
-            category: "",
-            description: "",
-            image: "/images/robux.png",
-            stock: 0,
-            status: "active"
-        })
+    const handleAddProduct = async () => {
+        try {
+            const newProduct = await productService.createProduct(formData)
+            setProducts([newProduct, ...products])
+            setIsAddDialogOpen(false)
+            setFormData({
+                name: "",
+                price: 0,
+                category: "",
+                description: "",
+                image_url: "/images/robux.png",
+                stock: 0
+            })
+            toast.success("Produk berhasil ditambahkan")
+        } catch (error) {
+            console.error("Error creating product:", error)
+            toast.error("Gagal menambah produk")
+        }
+    }
+
+    if (loading) {
+        return (
+            <div className="flex h-screen w-full items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        )
     }
 
     return (
@@ -154,7 +197,6 @@ export default function ProductsManagement() {
                                     <TableHead>Price</TableHead>
                                     <TableHead>Stock</TableHead>
                                     <TableHead>Status</TableHead>
-                                    <TableHead>Sales</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -164,7 +206,7 @@ export default function ProductsManagement() {
                                         <TableCell>
                                             <div className="flex flex-col">
                                                 <span className="font-medium">{product.name}</span>
-                                                <span className="text-xs text-muted-foreground font-mono">{product.id}</span>
+                                                <span className="text-xs text-muted-foreground font-mono">{product.id.substring(0, 8)}...</span>
                                             </div>
                                         </TableCell>
                                         <TableCell>
@@ -177,8 +219,7 @@ export default function ProductsManagement() {
                                             Rp {product.price.toLocaleString('id-ID')}
                                         </TableCell>
                                         <TableCell>{product.stock}</TableCell>
-                                        <TableCell>{getStatusBadge(product.status)}</TableCell>
-                                        <TableCell>{product.sales}</TableCell>
+                                        <TableCell>{getStatusBadge(product.stock)}</TableCell>
                                         <TableCell className="text-right">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>

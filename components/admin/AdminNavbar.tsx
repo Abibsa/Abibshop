@@ -12,14 +12,14 @@ import {
     LogOut
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useAuthStore } from "@/lib/auth-store"
 import { useRouter } from "next/navigation"
 import { ModeToggle } from "@/components/mode-toggle"
+import { authService } from "@/services/auth.service"
+import { toast } from "sonner"
 
 export default function AdminNavbar() {
     const pathname = usePathname()
     const router = useRouter()
-    const { logout } = useAuthStore()
 
     const navItems = [
         {
@@ -27,11 +27,11 @@ export default function AdminNavbar() {
             href: "/admin",
             icon: <LayoutDashboard className="h-4 w-4" />
         },
-        {
-            title: "Pengguna",
-            href: "/admin/users",
-            icon: <Users className="h-4 w-4" />
-        },
+        // {
+        //     title: "Pengguna",
+        //     href: "/admin/users",
+        //     icon: <Users className="h-4 w-4" />
+        // },
         {
             title: "Produk",
             href: "/admin/products",
@@ -44,9 +44,15 @@ export default function AdminNavbar() {
         },
     ]
 
-    const handleLogout = () => {
-        logout()
-        router.push("/")
+    const handleLogout = async () => {
+        try {
+            await authService.signOut()
+            router.push("/login")
+            router.refresh()
+            toast.success("Logged out successfully")
+        } catch (error) {
+            console.error("Logout error:", error)
+        }
     }
 
     return (

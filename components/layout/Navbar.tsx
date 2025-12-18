@@ -3,7 +3,8 @@
 import Link from "next/link"
 import { ShoppingCart, Menu, User, LogOut, LayoutDashboard, Settings } from "lucide-react"
 import { useState, useEffect } from "react"
-import { useAuthStore } from "@/lib/auth-store"
+import { createClient } from "@/lib/supabase/client"
+import { authService } from "@/services/auth.service"
 import { useCartStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
@@ -21,13 +22,52 @@ import { Badge } from "@/components/ui/badge"
 
 export default function Navbar() {
     const [isOpen, setIsOpen] = useState(false)
-    const { user, isAuthenticated, logout } = useAuthStore()
     const { items } = useCartStore()
     const router = useRouter()
     const [mounted, setMounted] = useState(false)
 
+    // Auth State
+    const [user, setUser] = useState<any>(null)
+    const [isAuthenticated, setIsAuthenticated] = useState(false)
+    const supabase = createClient()
+
     useEffect(() => {
         setMounted(true)
+
+        // Check initial session
+        const checkUser = async () => {
+            try {
+                const { data: { user: authUser } } = await supabase.auth.getUser()
+                if (authUser) {
+                    const profile = await authService.getProfile(authUser.id)
+                    setUser({ ...authUser, ...profile, name: profile.full_name || authUser.email })
+                    setIsAuthenticated(true)
+                } else {
+                    setUser(null)
+                    setIsAuthenticated(false)
+                }
+            } catch (error) {
+                console.error("Error checking user:", error)
+            }
+        }
+
+        checkUser()
+
+        // Listen for auth changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            if (session?.user) {
+                const profile = await authService.getProfile(session.user.id)
+                setUser({ ...session.user, ...profile, name: profile.full_name || session.user.email })
+                setIsAuthenticated(true)
+            } else {
+                setUser(null)
+                setIsAuthenticated(false)
+            }
+        })
+
+        return () => {
+            subscription.unsubscribe()
+        }
     }, [])
 
     const navLinks = [
@@ -36,9 +76,10 @@ export default function Navbar() {
         { name: "Cek Pesanan", href: "/tracking" },
     ]
 
-    const handleLogout = () => {
-        logout()
+    const handleLogout = async () => {
+        await authService.signOut()
         router.push("/")
+        router.refresh()
     }
 
     const cartItemCount = items.length

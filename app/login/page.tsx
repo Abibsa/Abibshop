@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useAuthStore } from "@/lib/auth-store"
+import { authService } from "@/services/auth.service"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,31 +12,56 @@ import { Loader2, Lock, Mail, Sparkles } from "lucide-react"
 
 export default function LoginPage() {
     const router = useRouter()
-    const { login } = useAuthStore()
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState("")
+
+    // Cek jika user sudah login saat buka halaman ini
+    useEffect(() => {
+        const checkSession = async () => {
+            try {
+                const user = await authService.getCurrentUser()
+                if (user) {
+                    router.replace('/') // Auto redirect ke home
+                }
+            } catch (e) {
+                // No session, stay here
+            }
+        }
+        checkSession()
+    }, [router])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setError("")
         setLoading(true)
 
-        const success = await login(email, password)
+        try {
+            const { user } = await authService.signIn(email, password)
 
-        if (success) {
-            const user = useAuthStore.getState().user
-            if (user?.role === 'admin') {
-                router.push('/admin')
-            } else {
+            if (user) {
+                // Login sukses! Cek role sebentar
+                try {
+                    const profile = await authService.getProfile(user.id)
+                    if (profile?.role === 'admin') {
+                        router.push('/admin')
+                        router.refresh()
+                        return
+                    }
+                } catch (e) {
+                    console.log("Profile check failed, redirecting to home")
+                }
+
+                // Default redirect
                 router.push('/')
+                router.refresh()
             }
-        } else {
-            setError("Email atau password salah!")
+        } catch (err: any) {
+            console.error('Login error:', err)
+            setError(err.message || "Email atau password salah!")
+            setLoading(false) // Stop loading only on error
         }
-
-        setLoading(false)
     }
 
     return (
@@ -76,7 +101,7 @@ export default function LoginPage() {
                                     <Input
                                         id="email"
                                         type="email"
-                                        placeholder="admin@abibshop.com"
+                                        placeholder="azizabib22@gmail.com"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         className="pl-10"
@@ -104,11 +129,11 @@ export default function LoginPage() {
                             <div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
                                 <div className="flex items-center gap-2 mb-2">
                                     <Sparkles className="h-4 w-4 text-primary" />
-                                    <p className="font-semibold text-sm">Demo Accounts:</p>
+                                    <p className="font-semibold text-sm">Demo Account:</p>
                                 </div>
                                 <div className="space-y-1 text-sm text-muted-foreground">
-                                    <p className="font-mono">Admin: admin@abibshop.com / admin123</p>
-                                    <p className="font-mono">User: user@example.com / user123</p>
+                                    <p className="font-mono">Admin: azizabib22@gmail.com</p>
+                                    <p className="font-mono text-xs">Password: nmc.jockers</p>
                                 </div>
                             </div>
                         </CardContent>

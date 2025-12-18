@@ -2,37 +2,50 @@
 
 import { useParams, useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
-import { useProductStore } from "@/lib/product-store"
+import { productService } from "@/services/product.service"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { useCartStore } from "@/lib/store"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, ShoppingCart, Sparkles } from "lucide-react"
+import { ArrowLeft, ShoppingCart, Sparkles, Loader2 } from "lucide-react"
 import Link from "next/link"
+import { toast } from "sonner"
+import { Database } from "@/lib/supabase/database.types"
+
+type Product = Database['public']['Tables']['products']['Row']
 
 export default function ProductDetailPage() {
     const params = useParams()
     const router = useRouter()
     const { addItem } = useCartStore()
-    const { getProductById } = useProductStore()
 
-    const [product, setProduct] = useState<any>(null)
+    const [product, setProduct] = useState<Product | null>(null)
     const [username, setUsername] = useState("")
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        if (params.id) {
-            const found = getProductById(params.id as string)
-            setProduct(found || null)
-            setLoading(false)
+        const fetchProduct = async () => {
+            if (params.id) {
+                try {
+                    const found = await productService.getProductById(params.id as string)
+                    setProduct(found || null)
+                } catch (error) {
+                    console.error("Error fetching product:", error)
+                } finally {
+                    setLoading(false)
+                }
+            } else {
+                setLoading(false)
+            }
         }
-    }, [params.id, getProductById])
+        fetchProduct()
+    }, [params.id])
 
     const handleBuy = () => {
         if (!username) {
-            alert("Mohon isi username Roblox Anda!")
+            toast.error("Mohon isi username Roblox Anda!")
             return
         }
         if (product) {
@@ -47,10 +60,27 @@ export default function ProductDetailPage() {
         }
     }
 
+    const handleAddToCart = () => {
+        if (!username) {
+            toast.error("Mohon isi username Roblox Anda!")
+            return
+        }
+        if (product) {
+            addItem({
+                productId: product.id,
+                productName: product.name,
+                price: product.price,
+                username: username,
+                quantity: 1,
+            })
+            toast.success("Produk berhasil ditambahkan ke keranjang!")
+        }
+    }
+
     if (loading) {
         return (
-            <div className="container py-20 text-center">
-                <div className="animate-pulse">Loading...</div>
+            <div className="flex h-screen w-full items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
         )
     }
@@ -70,13 +100,13 @@ export default function ProductDetailPage() {
     }
 
     const getStatusBadge = () => {
-        if (product.status === 'out_of_stock') {
+        if (product.stock <= 0) {
             return <Badge variant="destructive">Stok Habis</Badge>
         }
-        if (product.status === 'low_stock') {
-            return <Badge className="bg-yellow-500">Stok Terbatas</Badge>
+        if (product.stock < 10) {
+            return <Badge className="bg-yellow-500 hover:bg-yellow-600">Stok Terbatas</Badge>
         }
-        return <Badge className="bg-green-500">Tersedia</Badge>
+        return <Badge className="bg-green-500 hover:bg-green-600">Tersedia</Badge>
     }
 
     return (
@@ -186,23 +216,8 @@ export default function ProductDetailPage() {
                                         size="lg"
                                         variant="outline"
                                         className="w-full text-base h-12 border-primary text-primary hover:bg-primary/10"
-                                        onClick={() => {
-                                            if (!username) {
-                                                alert("Mohon isi username Roblox Anda!")
-                                                return
-                                            }
-                                            if (product) {
-                                                addItem({
-                                                    productId: product.id,
-                                                    productName: product.name,
-                                                    price: product.price,
-                                                    username: username,
-                                                    quantity: 1,
-                                                })
-                                                alert("✅ Produk berhasil ditambahkan ke keranjang!")
-                                            }
-                                        }}
-                                        disabled={product.status === 'out_of_stock'}
+                                        onClick={handleAddToCart}
+                                        disabled={product.stock <= 0}
                                     >
                                         <ShoppingCart className="mr-2 h-5 w-5" />
                                         + Keranjang
@@ -211,12 +226,12 @@ export default function ProductDetailPage() {
                                         size="lg"
                                         className="w-full text-base h-12 gradient-primary hover:opacity-90 transition-opacity"
                                         onClick={handleBuy}
-                                        disabled={product.status === 'out_of_stock'}
+                                        disabled={product.stock <= 0}
                                     >
                                         Beli Langsung
                                     </Button>
                                 </div>
-                                {product.stock && (
+                                {product.stock > 0 && (
                                     <p className="text-xs text-center text-muted-foreground">
                                         Stok tersedia: {product.stock} unit
                                     </p>

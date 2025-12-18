@@ -7,12 +7,15 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { User, Bell, Shield, CreditCard, MapPin, Trash2, Loader2 } from "lucide-react"
-import { useAuthStore } from "@/lib/auth-store"
+import { authService } from "@/services/auth.service"
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
+import { createClient } from "@/lib/supabase/client"
 
 export default function SettingsPage() {
-    const { user } = useAuthStore()
+    const supabase = createClient()
+    const [user, setUser] = useState<any>(null)
+    const [loading, setLoading] = useState(true)
 
     // Profile State
     const [name, setName] = useState("")
@@ -20,7 +23,7 @@ export default function SettingsPage() {
     const [phone, setPhone] = useState("")
     const [isProfileLoading, setIsProfileLoading] = useState(false)
 
-    // Address State
+    // Address State (Mock for now as schema doesn't support it yet)
     const [address, setAddress] = useState("")
     const [city, setCity] = useState("")
     const [zipCode, setZipCode] = useState("")
@@ -36,27 +39,58 @@ export default function SettingsPage() {
     const [orderNotif, setOrderNotif] = useState(true)
     const [promoNotif, setPromoNotif] = useState(true)
 
-    // Initialize state from user store
+    // Initialize state
     useEffect(() => {
-        if (user) {
-            setName(user.name || "")
-            setEmail(user.email || "")
-            // Mock data for fields not in auth store yet
-            setPhone("081234567890")
-            setAddress("Jl. Contoh No. 123")
-            setCity("Jakarta Selatan")
-            setZipCode("12345")
+        const init = async () => {
+            try {
+                const currentUser = await authService.getCurrentUser()
+                if (currentUser) {
+                    const profile = await authService.getProfile(currentUser.id)
+                    setUser({ ...currentUser, ...profile, name: profile.full_name })
+
+                    setName(profile.full_name || "")
+                    setEmail(currentUser.email || "")
+                    setPhone(profile.phone || "")
+
+                    // Initialize address with mock data or empty
+                    setAddress("")
+                    setCity("")
+                    setZipCode("")
+                }
+            } catch (error) {
+                console.error("Error loading settings:", error)
+            } finally {
+                setLoading(false)
+            }
         }
-    }, [user])
+        init()
+    }, [])
 
     const handleSaveProfile = async () => {
         setIsProfileLoading(true)
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1500))
-        setIsProfileLoading(false)
-        toast.success("Profil berhasil diperbarui", {
-            description: "Informasi profil Anda telah disimpan."
-        })
+        try {
+            if (user) {
+                // Update profile in database
+                const { error } = await supabase
+                    .from('profiles')
+                    .update({
+                        full_name: name,
+                        phone: phone
+                    })
+                    .eq('id', user.id)
+
+                if (error) throw error
+
+                toast.success("Profil berhasil diperbarui", {
+                    description: "Informasi profil Anda telah disimpan."
+                })
+            }
+        } catch (error) {
+            console.error("Error updating profile:", error)
+            toast.error("Gagal memperbarui profil")
+        } finally {
+            setIsProfileLoading(false)
+        }
     }
 
     const handleSaveAddress = async () => {
@@ -64,7 +98,7 @@ export default function SettingsPage() {
         await new Promise(resolve => setTimeout(resolve, 1500))
         setIsAddressLoading(false)
         toast.success("Alamat berhasil diperbarui", {
-            description: "Alamat pengiriman Anda telah disimpan."
+            description: "Alamat pengiriman Anda telah disimpan (Simulasi)."
         })
     }
 
@@ -76,25 +110,34 @@ export default function SettingsPage() {
             return
         }
 
-        if (newPassword.length < 8) {
+        if (newPassword.length < 6) {
             toast.error("Gagal mengubah kata sandi", {
-                description: "Kata sandi baru minimal 8 karakter."
+                description: "Kata sandi baru minimal 6 karakter."
             })
             return
         }
 
         setIsSecurityLoading(true)
-        await new Promise(resolve => setTimeout(resolve, 2000))
-        setIsSecurityLoading(false)
+        try {
+            const { error } = await supabase.auth.updateUser({ password: newPassword })
 
-        // Reset fields
-        setCurrentPassword("")
-        setNewPassword("")
-        setConfirmPassword("")
+            if (error) throw error
 
-        toast.success("Kata sandi berhasil diubah", {
-            description: "Silakan gunakan kata sandi baru untuk login selanjutnya."
-        })
+            // Reset fields
+            setCurrentPassword("")
+            setNewPassword("")
+            setConfirmPassword("")
+
+            toast.success("Kata sandi berhasil diubah", {
+                description: "Silakan gunakan kata sandi baru untuk login selanjutnya."
+            })
+        } catch (error: any) {
+            toast.error("Gagal mengubah kata sandi", {
+                description: error.message
+            })
+        } finally {
+            setIsSecurityLoading(false)
+        }
     }
 
     const handleNotifChange = (type: 'order' | 'promo', value: boolean) => {
@@ -104,6 +147,14 @@ export default function SettingsPage() {
         toast.info("Pengaturan notifikasi diperbarui", {
             duration: 2000
         })
+    }
+
+    if (loading) {
+        return (
+            <div className="flex h-screen w-full items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        )
     }
 
     return (
@@ -173,7 +224,7 @@ export default function SettingsPage() {
                             <CardTitle>Alamat Pengiriman</CardTitle>
                         </div>
                         <CardDescription>
-                            Kelola alamat utama untuk pengiriman pesanan.
+                            Kelola alamat utama untuk pengiriman pesanan (Segera hadir).
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -266,39 +317,28 @@ export default function SettingsPage() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="grid gap-2">
-                            <Label htmlFor="current-password">Kata Sandi Saat Ini</Label>
+                            <Label htmlFor="new-password">Kata Sandi Baru</Label>
                             <Input
-                                id="current-password"
+                                id="new-password"
                                 type="password"
-                                value={currentPassword}
-                                onChange={(e) => setCurrentPassword(e.target.value)}
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
                             />
                         </div>
-                        <div className="grid md:grid-cols-2 gap-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="new-password">Kata Sandi Baru</Label>
-                                <Input
-                                    id="new-password"
-                                    type="password"
-                                    value={newPassword}
-                                    onChange={(e) => setNewPassword(e.target.value)}
-                                />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="confirm-password">Konfirmasi Kata Sandi</Label>
-                                <Input
-                                    id="confirm-password"
-                                    type="password"
-                                    value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                />
-                            </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="confirm-password">Konfirmasi Kata Sandi</Label>
+                            <Input
+                                id="confirm-password"
+                                type="password"
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                            />
                         </div>
                         <div className="flex justify-end">
                             <Button
                                 variant="outline"
                                 onClick={handleChangePassword}
-                                disabled={isSecurityLoading || !currentPassword || !newPassword}
+                                disabled={isSecurityLoading || !newPassword}
                             >
                                 {isSecurityLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                 Ubah Kata Sandi

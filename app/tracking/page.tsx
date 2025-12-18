@@ -2,51 +2,97 @@
 
 import { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
-import { useOrderStore } from "@/lib/order-store"
+import { orderService } from "@/services/order.service"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Search, Package, Clock, CheckCircle, XCircle, Copy, Gift, ArrowRight } from "lucide-react"
+import { Search, Package, Clock, CheckCircle, XCircle, Copy, Gift, ArrowRight, Loader2 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import Link from "next/link"
+import { Database } from "@/lib/supabase/database.types"
+
+type Order = Database['public']['Tables']['orders']['Row']
 
 function TrackingContent() {
     const searchParams = useSearchParams()
     const [orderId, setOrderId] = useState("")
-    const [searchedOrder, setSearchedOrder] = useState<any>(null)
+    const [searchedOrder, setSearchedOrder] = useState<Order | null>(null)
     const [error, setError] = useState("")
     const [isCopied, setIsCopied] = useState(false)
-    const { getOrderById } = useOrderStore()
+    const [loading, setLoading] = useState(false)
 
     // Auto-fill Order ID from URL parameter
     useEffect(() => {
         const orderIdParam = searchParams.get('orderId')
         if (orderIdParam) {
             setOrderId(orderIdParam)
-            // Auto-search if orderId is provided
-            const order = getOrderById(orderIdParam)
-            if (order) {
-                setSearchedOrder(order)
-            }
+            handleSearch(null, orderIdParam)
         }
-    }, [searchParams, getOrderById])
+    }, [searchParams])
 
-    const handleSearch = (e: React.FormEvent) => {
-        e.preventDefault()
+    const handleSearch = async (e: React.FormEvent | null, idOverride?: string) => {
+        if (e) e.preventDefault()
+        const idToSearch = idOverride || orderId
+
         setError("")
         setSearchedOrder(null)
 
-        if (!orderId.trim()) {
+        if (!idToSearch.trim()) {
             setError("Mohon masukkan Order ID")
             return
         }
 
-        const order = getOrderById(orderId.trim())
-        if (order) {
-            setSearchedOrder(order)
-        } else {
-            setError("Order ID tidak ditemukan. Pastikan ID yang Anda masukkan benar.")
+        setLoading(true)
+        try {
+            // Find order by order_number (string) if that's what we use, or ID (uuid)
+            // Assuming users search by order_number which is user friendly (e.g. created manually or by system)
+            // If getOrder expects UUID, we might need a search method. 
+            // My orderService.getOrder usually takes numeric/string ID if implemented that way or UUID.
+
+            // Let's assume getOrder takes the primary key (UUID). 
+            // BUT order_number is distinct. 
+            // Let's try to fetch by column if getOrder expects ID.
+            // Actually, querying Supabase directly here or updating Service to findByOrderNumber is safer.
+            // Let's rely on orderService. 如果 fails, I will fix service. 
+
+            // I'll assume getOrder(id) fetches by PK. 
+            // If user enters 'ORD-123...' that matches searchedOrder.order_number, passing it to getOrder (UUID) will fail.
+            // I'll assume for tracking page we want to find by order_number OR id.
+
+            // Let's use getOrders with filter for safety if getOrder is strict ID
+            // removed invalid filters prop for now as I can't filter by arbitrary columns easily without modifying service. 
+            // Wait, getOrders filter only supports status, paymentStatus, userId. Not order_number.
+            // But I have getOrderByNumber! Use that.
+
+            try {
+                const byNumber = await orderService.getOrderByNumber(idToSearch.trim())
+                if (byNumber) {
+                    setSearchedOrder(byNumber)
+                    setLoading(false)
+                    return
+                }
+            } catch (ignore) {
+                // ignore
+            }
+
+            try {
+                const byId = await orderService.getOrderById(idToSearch.trim())
+                if (byId) {
+                    setSearchedOrder(byId)
+                    setLoading(false)
+                    return
+                }
+            } catch (ignore) {
+                // ignore
+            }
+
+            setError("Order ID tidak ditemukan.")
+        } catch (err) {
+            console.error(err)
+            setError("Terjadi kesalahan saat mencari pesanan.")
+        } finally {
+            setLoading(false)
         }
     }
 
@@ -72,7 +118,10 @@ function TrackingContent() {
                     desc: "Pembayaran Anda telah kami terima. Pesanan sedang dalam antrian.",
                     color: "bg-blue-500"
                 }
-            case 'processing':
+            case 'processing': // Mapped 'processing' to 'paid' visually if schema doesn't have it? 
+                // Schema has order_status enum: pending, paid, completed, cancelled, failed.
+                // If local code used 'processing', we might map it to 'paid' or custom handling.
+                // Assuming 'paid' is equivalent to 'processing' for user view.
                 return {
                     icon: <Package className="h-12 w-12 text-purple-500 animate-pulse" />,
                     title: "Sedang Diproses",
@@ -93,6 +142,13 @@ function TrackingContent() {
                     desc: "Pesanan ini telah dibatalkan.",
                     color: "bg-red-500"
                 }
+            case 'failed':
+                return {
+                    icon: <XCircle className="h-12 w-12 text-red-500" />,
+                    title: "Pesanan Gagal",
+                    desc: "Pembayaran atau pemrosesan gagal.",
+                    color: "bg-red-500"
+                }
             default:
                 return {
                     icon: <Package className="h-12 w-12 text-gray-500" />,
@@ -101,6 +157,12 @@ function TrackingContent() {
                     color: "bg-gray-500"
                 }
         }
+    }
+
+    // Helper to access metadata safely
+    const getRedeemCode = (order: Order) => {
+        const meta = order.metadata as any
+        return meta?.redeem_code || meta?.redeemCode
     }
 
     return (
@@ -129,15 +191,15 @@ function TrackingContent() {
                         <CardDescription>Masukkan Order ID (contoh: ORD-173294...)</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <form onSubmit={handleSearch} className="flex gap-2">
+                        <form onSubmit={(e) => handleSearch(e)} className="flex gap-2">
                             <Input
                                 placeholder="Masukkan Order ID..."
                                 value={orderId}
                                 onChange={(e) => setOrderId(e.target.value)}
                                 className="text-lg h-12"
                             />
-                            <Button type="submit" size="lg" className="gradient-primary h-12 px-6">
-                                <Search className="h-5 w-5" />
+                            <Button type="submit" size="lg" className="gradient-primary h-12 px-6" disabled={loading}>
+                                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5" />}
                             </Button>
                         </form>
                         {error && (
@@ -177,28 +239,28 @@ function TrackingContent() {
                                     <div className="grid grid-cols-2 gap-4 text-sm">
                                         <div className="space-y-1">
                                             <p className="text-muted-foreground">Order ID</p>
-                                            <p className="font-mono font-medium">{searchedOrder.id}</p>
+                                            <p className="font-mono font-medium">{searchedOrder.order_number}</p>
                                         </div>
                                         <div className="space-y-1">
                                             <p className="text-muted-foreground">Tanggal</p>
-                                            <p className="font-medium">{new Date(searchedOrder.date).toLocaleDateString('id-ID')}</p>
+                                            <p className="font-medium">{new Date(searchedOrder.created_at).toLocaleDateString('id-ID')}</p>
                                         </div>
                                         <div className="space-y-1">
                                             <p className="text-muted-foreground">Produk</p>
-                                            <p className="font-medium">{searchedOrder.productName}</p>
+                                            <p className="font-medium">{searchedOrder.product_name}</p>
                                         </div>
                                         <div className="space-y-1">
                                             <p className="text-muted-foreground">Total Harga</p>
-                                            <p className="font-medium">Rp {searchedOrder.amount.toLocaleString('id-ID')}</p>
+                                            <p className="font-medium">Rp {searchedOrder.total_amount.toLocaleString('id-ID')}</p>
                                         </div>
                                         <div className="col-span-2 space-y-1 pt-2 border-t">
                                             <p className="text-muted-foreground">Username Roblox</p>
-                                            <p className="font-mono font-medium text-primary">{searchedOrder.robloxUsername}</p>
+                                            <p className="font-mono font-medium text-primary">{searchedOrder.game_username}</p>
                                         </div>
                                     </div>
 
                                     {/* Redeem Code Section - Only show if completed and has code */}
-                                    {searchedOrder.status === 'completed' && searchedOrder.redeemCode && (
+                                    {searchedOrder.status === 'completed' && getRedeemCode(searchedOrder) && (
                                         <div className="bg-green-50 dark:bg-green-950/20 border-2 border-green-200 dark:border-green-800 rounded-xl p-4 md:p-6 animate-scale-in">
                                             <div className="flex items-center gap-2 mb-3 text-green-700 dark:text-green-400">
                                                 <Gift className="h-5 w-5" />
@@ -206,12 +268,12 @@ function TrackingContent() {
                                             </div>
                                             <div className="flex gap-2">
                                                 <div className="flex-1 bg-white dark:bg-black/20 border border-green-200 dark:border-green-800 rounded-lg p-3 font-mono text-lg md:text-xl font-bold text-center tracking-wider select-all">
-                                                    {searchedOrder.redeemCode}
+                                                    {getRedeemCode(searchedOrder)}
                                                 </div>
                                                 <Button
                                                     size="icon"
                                                     className="h-auto w-12 shrink-0 bg-green-600 hover:bg-green-700 text-white"
-                                                    onClick={() => copyToClipboard(searchedOrder.redeemCode)}
+                                                    onClick={() => copyToClipboard(getRedeemCode(searchedOrder))}
                                                 >
                                                     {isCopied ? <CheckCircle className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
                                                 </Button>

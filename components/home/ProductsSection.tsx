@@ -2,18 +2,34 @@
 
 import Link from "next/link"
 import Image from "next/image"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card"
-import { Sparkles, ShoppingBag } from "lucide-react"
-import { useProductStore } from "@/lib/product-store"
+import { Sparkles, ShoppingBag, Loader2 } from "lucide-react"
+import { productService } from "@/services/product.service"
+import { Database } from "@/lib/supabase/database.types"
+
+type Product = Database['public']['Tables']['products']['Row']
 
 export default function ProductsSection() {
-    const { products } = useProductStore()
+    const [products, setProducts] = useState<Product[]>([])
+    const [loading, setLoading] = useState(true)
 
-    // Get 6 popular products (mix from different categories)
+    useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                const data = await productService.getProducts()
+                setProducts(data.slice(0, 6)) // Get top 6
+            } catch (error) {
+                console.error("Error fetching products:", error)
+            } finally {
+                setLoading(false)
+            }
+        }
+        fetchProducts()
+    }, [])
+
     const popularProducts = products
-        .filter(p => p.status === 'active')
-        .slice(0, 6)
 
     const getBadgeGradient = (index: number) => {
         const gradients = [
@@ -62,9 +78,9 @@ export default function ProductsSection() {
                             </div>
                             <CardHeader className="pb-2 md:pb-4 p-3 md:p-6">
                                 <div className="aspect-square bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 rounded-md md:rounded-lg mb-2 md:mb-4 flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform">
-                                    {product.image ? (
+                                    {product.image_url ? (
                                         <Image
-                                            src={product.image}
+                                            src={product.image_url}
                                             alt={product.name}
                                             fill
                                             className="object-cover"

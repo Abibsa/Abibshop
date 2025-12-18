@@ -1,10 +1,9 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAuthStore } from "@/lib/auth-store"
-import { useProductStore } from "@/lib/product-store"
-import { useOrderStore } from "@/lib/order-store"
+import { authService } from "@/services/auth.service"
+import { orderService } from "@/services/order.service"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
@@ -15,26 +14,57 @@ import {
     Clock,
     CheckCircle,
     Eye,
-    Edit,
-    Trash2,
     TrendingUp,
+    Loader2
 } from "lucide-react"
 import Link from "next/link"
+import { Database } from "@/lib/supabase/database.types"
+
+type Order = Database['public']['Tables']['orders']['Row']
 
 export default function AdminDashboard() {
     const router = useRouter()
-    const { user, isAuthenticated } = useAuthStore()
-    const { orders } = useOrderStore()
-    const { products } = useProductStore()
+    const [user, setUser] = useState<any>(null)
+    const [orders, setOrders] = useState<Order[]>([])
+    const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        if (!isAuthenticated || user?.role !== 'admin') {
-            router.push('/login')
+        const init = async () => {
+            try {
+                const currentUser = await authService.getCurrentUser()
+                const isAdmin = currentUser ? await authService.isAdmin(currentUser.id) : false
+
+                if (!isAdmin) {
+                    router.push('/login')
+                    return
+                }
+
+                const profile = await authService.getProfile(currentUser!.id)
+                setUser({ ...currentUser, name: profile.full_name })
+
+                const { orders: data } = await orderService.getOrders()
+                // Sort by date desc
+                const sorted = data.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                setOrders(sorted)
+            } catch (error) {
+                console.error("Dashboard error:", error)
+            } finally {
+                setLoading(false)
+            }
         }
-    }, [isAuthenticated, user, router])
+        init()
+    }, [router])
+
+    if (loading) {
+        return (
+            <div className="flex h-screen w-full items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        )
+    }
 
     const stats = {
-        totalRevenue: orders.filter(o => o.status === 'completed').reduce((sum, o) => sum + o.amount, 0),
+        totalRevenue: orders.filter(o => o.status === 'completed').reduce((sum, o) => sum + o.total_amount, 0),
         totalOrders: orders.length,
         pendingOrders: orders.filter(o => o.status === 'pending').length,
         completedOrders: orders.filter(o => o.status === 'completed').length,
@@ -81,13 +111,11 @@ export default function AdminDashboard() {
             paid: { variant: "default", label: "Paid" },
             processing: { variant: "secondary", label: "Processing" },
             completed: { variant: "secondary", label: "Completed" },
+            cancelled: { variant: "destructive", label: "Cancelled" },
+            failed: { variant: "destructive", label: "Failed" }
         }
         const config = variants[status] || { variant: "outline", label: status }
         return <Badge variant={config.variant}>{config.label}</Badge>
-    }
-
-    if (!isAuthenticated || user?.role !== 'admin') {
-        return null
     }
 
     // Get recent orders (last 5)
@@ -157,18 +185,18 @@ export default function AdminDashboard() {
                                         key={order.id}
                                         className="hover:bg-muted/50 transition-colors"
                                     >
-                                        <TableCell className="font-medium font-mono text-sm">{order.id}</TableCell>
+                                        <TableCell className="font-medium font-mono text-sm">{order.order_number}</TableCell>
                                         <TableCell>
                                             <div>
-                                                <p className="font-medium">{order.customerName}</p>
-                                                <p className="text-xs text-muted-foreground">{order.customerEmail}</p>
+                                                <p className="font-medium">{order.customer_name}</p>
+                                                <p className="text-xs text-muted-foreground">{order.customer_email}</p>
                                             </div>
                                         </TableCell>
-                                        <TableCell className="font-medium">{order.productName}</TableCell>
-                                        <TableCell className="font-mono text-sm text-primary">{order.robloxUsername}</TableCell>
-                                        <TableCell className="font-semibold">Rp {order.amount.toLocaleString('id-ID')}</TableCell>
+                                        <TableCell className="font-medium">{order.product_name}</TableCell>
+                                        <TableCell className="font-mono text-sm text-primary">{order.game_username}</TableCell>
+                                        <TableCell className="font-semibold">Rp {order.total_amount.toLocaleString('id-ID')}</TableCell>
                                         <TableCell>{getStatusBadge(order.status)}</TableCell>
-                                        <TableCell className="text-sm text-muted-foreground">{new Date(order.date).toLocaleDateString('id-ID')}</TableCell>
+                                        <TableCell className="text-sm text-muted-foreground">{new Date(order.created_at).toLocaleDateString('id-ID')}</TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-1">
                                                 <Button size="sm" variant="ghost" className="hover:bg-blue-100 dark:hover:bg-blue-900/20" asChild>

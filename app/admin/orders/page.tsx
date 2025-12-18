@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAuthStore } from "@/lib/auth-store"
-import { useOrderStore } from "@/lib/order-store"
+import { authService } from "@/services/auth.service"
+import { orderService } from "@/services/order.service"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
@@ -25,30 +25,53 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Search, ShoppingCart, Filter, Eye, Edit, Trash2, Gift } from "lucide-react"
+import { Search, ShoppingCart, Filter, Eye, Edit, Trash2, Gift, Loader2 } from "lucide-react"
+import { Database } from "@/lib/supabase/database.types"
+import { toast } from "sonner"
+
+type Order = Database['public']['Tables']['orders']['Row']
 
 export default function AdminOrdersPage() {
     const router = useRouter()
-    const { user, isAuthenticated } = useAuthStore()
-    const { orders, updateOrderStatus, deleteOrder } = useOrderStore()
+
+    const [orders, setOrders] = useState<Order[]>([])
+    const [loading, setLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState("")
     const [statusFilter, setStatusFilter] = useState("all")
-    const [selectedOrder, setSelectedOrder] = useState<any>(null)
+    const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
     const [newStatus, setNewStatus] = useState("")
-    const [redeemCode, setRedeemCode] = useState("")
+    const [redeemCode, setRedeemCode] = useState("") // Keeping redeemCode state although not in DB, for potential metadata usage
 
     useEffect(() => {
-        if (!isAuthenticated || user?.role !== 'admin') {
-            router.push('/login')
+        const init = async () => {
+            try {
+                const user = await authService.getCurrentUser()
+                const isAdmin = user ? await authService.isAdmin(user.id) : false
+
+                if (!isAdmin) {
+                    router.push('/login')
+                    return
+                }
+
+                const { orders: data } = await orderService.getOrders()
+                // Sort by new
+                const sorted = data.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                setOrders(sorted)
+            } catch (error) {
+                console.error("Error loading orders:", error)
+            } finally {
+                setLoading(false)
+            }
         }
-    }, [isAuthenticated, user, router])
+        init()
+    }, [router])
 
     const filteredOrders = orders.filter(order => {
         const matchesSearch =
-            order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            order.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            order.robloxUsername.toLowerCase().includes(searchQuery.toLowerCase())
+            order.order_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            order.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            order.game_username.toLowerCase().includes(searchQuery.toLowerCase())
         const matchesStatus = statusFilter === "all" || order.status === statusFilter
         return matchesSearch && matchesStatus
     })
@@ -60,33 +83,67 @@ export default function AdminOrdersPage() {
             processing: { variant: "secondary", label: "Processing" },
             completed: { variant: "secondary", label: "Completed" },
             cancelled: { variant: "destructive", label: "Cancelled" },
+            failed: { variant: "destructive", label: "Failed" }
         }
         const config = variants[status] || { variant: "outline", label: status }
         return <Badge variant={config.variant}>{config.label}</Badge>
     }
 
-    const handleEditOrder = (order: any) => {
+    const handleEditOrder = (order: Order) => {
         setSelectedOrder(order)
         setNewStatus(order.status)
-        setRedeemCode(order.redeemCode || "")
+        // Check metadata for redeem code if needed
+        const metadata = order.metadata as any
+        setRedeemCode(metadata?.redeem_code || "")
         setIsEditDialogOpen(true)
     }
 
-    const handleUpdateStatus = () => {
+    const handleUpdateStatus = async () => {
         if (selectedOrder) {
-            updateOrderStatus(selectedOrder.id, newStatus as any, redeemCode)
-            setIsEditDialogOpen(false)
+            try {
+                // Prepare metadata if redeem code is present
+                const currentMeta = (selectedOrder.metadata as any) || {}
+                const updates: any = { status: newStatus as any }
+
+                if (newStatus === 'completed' && redeemCode) {
+                    updates.metadata = { ...currentMeta, redeem_code: redeemCode }
+                }
+
+                await orderService.updateOrder(selectedOrder.id, updates)
+
+                // Refresh list
+                const { orders: data } = await orderService.getOrders()
+                const sorted = data.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                setOrders(sorted)
+
+                setIsEditDialogOpen(false)
+                toast.success("Status pesanan berhasil diperbarui")
+            } catch (error) {
+                console.error("Error updating order:", error)
+                toast.error("Gagal memperbarui pesanan")
+            }
         }
     }
 
-    const handleDeleteOrder = (id: string) => {
+    const handleDeleteOrder = async (id: string) => {
         if (confirm("Apakah Anda yakin ingin menghapus pesanan ini?")) {
-            deleteOrder(id)
+            try {
+                await orderService.deleteOrder(id)
+                setOrders(orders.filter(o => o.id !== id))
+                toast.success("Pesanan dihapus")
+            } catch (error) {
+                console.error("Error deleting order:", error)
+                toast.error("Gagal menghapus pesanan")
+            }
         }
     }
 
-    if (!isAuthenticated || user?.role !== 'admin') {
-        return null
+    if (loading) {
+        return (
+            <div className="flex h-screen w-full items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        )
     }
 
     return (
@@ -154,29 +211,29 @@ export default function AdminOrdersPage() {
                             <TableBody>
                                 {filteredOrders.map((order) => (
                                     <TableRow key={order.id} className="hover:bg-muted/50">
-                                        <TableCell className="font-medium font-mono text-sm">{order.id}</TableCell>
+                                        <TableCell className="font-medium font-mono text-sm">{order.order_number}</TableCell>
                                         <TableCell>
                                             <div>
-                                                <p className="font-medium">{order.customerName}</p>
-                                                <p className="text-xs text-muted-foreground">{order.customerEmail}</p>
+                                                <p className="font-medium">{order.customer_name}</p>
+                                                <p className="text-xs text-muted-foreground">{order.customer_email}</p>
                                             </div>
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex flex-col">
-                                                <span>{order.productName}</span>
-                                                {order.redeemCode && (
+                                                <span>{order.product_name}</span>
+                                                {(order.metadata as any)?.redeem_code && (
                                                     <span className="text-xs text-green-600 flex items-center gap-1">
                                                         <Gift className="h-3 w-3" /> Code Sent
                                                     </span>
                                                 )}
                                             </div>
                                         </TableCell>
-                                        <TableCell className="font-mono text-sm text-primary">{order.robloxUsername}</TableCell>
-                                        <TableCell className="text-sm">{order.paymentMethod}</TableCell>
-                                        <TableCell className="font-semibold">Rp {order.amount.toLocaleString('id-ID')}</TableCell>
+                                        <TableCell className="font-mono text-sm text-primary">{order.game_username}</TableCell>
+                                        <TableCell className="text-sm uppercase">{order.payment_method || '-'}</TableCell>
+                                        <TableCell className="font-semibold">Rp {order.total_amount.toLocaleString('id-ID')}</TableCell>
                                         <TableCell>{getStatusBadge(order.status)}</TableCell>
                                         <TableCell className="text-sm text-muted-foreground">
-                                            {new Date(order.date).toLocaleDateString('id-ID')}
+                                            {new Date(order.created_at).toLocaleDateString('id-ID')}
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-1">
@@ -217,21 +274,21 @@ export default function AdminOrdersPage() {
                     <DialogHeader>
                         <DialogTitle>Edit Status Pesanan</DialogTitle>
                         <DialogDescription>
-                            Ubah status pesanan {selectedOrder?.id}
+                            Ubah status pesanan {selectedOrder?.order_number}
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">
                             <Label>Customer</Label>
-                            <p className="text-sm font-medium">{selectedOrder?.customerName}</p>
+                            <p className="text-sm font-medium">{selectedOrder?.customer_name}</p>
                         </div>
                         <div className="space-y-2">
                             <Label>Product</Label>
-                            <p className="text-sm font-medium">{selectedOrder?.productName}</p>
+                            <p className="text-sm font-medium">{selectedOrder?.product_name}</p>
                         </div>
                         <div className="space-y-2">
                             <Label>Username Roblox</Label>
-                            <p className="text-sm font-mono">{selectedOrder?.robloxUsername}</p>
+                            <p className="text-sm font-mono">{selectedOrder?.game_username}</p>
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="status">Status</Label>
@@ -245,6 +302,7 @@ export default function AdminOrdersPage() {
                                     <SelectItem value="processing">Processing</SelectItem>
                                     <SelectItem value="completed">Completed</SelectItem>
                                     <SelectItem value="cancelled">Cancelled</SelectItem>
+                                    <SelectItem value="failed">Failed</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -281,4 +339,3 @@ export default function AdminOrdersPage() {
         </div>
     )
 }
-

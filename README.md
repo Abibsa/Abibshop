@@ -92,7 +92,7 @@ npm install
 4. **Buat Admin User**
    - Buka "Authentication" → "Users" di Supabase
    - Klik "Add user" → "Create new user"
-   - Email: `admin@abibshop.com`, Password: `admin123`
+   - Email: `azizabib22@gmail.com`, Password: `nmc.jockers`
    - Centang "Auto Confirm User"
    - Setelah dibuat, buka "Table Editor" → "profiles"
    - Edit user tersebut, ubah `role` menjadi `admin`
@@ -106,18 +106,12 @@ Buka [http://localhost:3000](http://localhost:3000) di browser Anda.
 
 ---
 
-## 🔑 Demo Accounts
+## 🔑 Demo Account
 
 ### Admin Account
 ```
-Email: admin@abibshop.com
-Password: admin123
-```
-
-### User Account
-```
-Email: user@example.com
-Password: user123
+Email: azizabib22@gmail.com
+Password: nmc.jockers
 ```
 
 ---

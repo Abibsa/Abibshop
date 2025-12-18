@@ -1,18 +1,36 @@
 "use client"
 
 import Link from "next/link"
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import Image from "next/image"
-import { useProductStore } from "@/lib/product-store"
+import { productService } from "@/services/product.service"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Search, Sparkles, ShoppingBag, Package } from "lucide-react"
+import { Search, Sparkles, ShoppingBag, Package, Loader2 } from "lucide-react"
+import { Database } from "@/lib/supabase/database.types"
+
+type Product = Database['public']['Tables']['products']['Row']
 
 export default function ProductsPage() {
+    const [products, setProducts] = useState<Product[]>([])
+    const [loading, setLoading] = useState(true)
     const [selectedCategory, setSelectedCategory] = useState("All")
     const [searchQuery, setSearchQuery] = useState("")
-    const { products } = useProductStore()
+
+    useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                const data = await productService.getProducts()
+                setProducts(data)
+            } catch (error) {
+                console.error("Error fetching products:", error)
+            } finally {
+                setLoading(false)
+            }
+        }
+        fetchProducts()
+    }, [])
 
     const categories = useMemo(() => {
         const uniqueCategories = Array.from(new Set(products.map(p => p.category)))
@@ -22,7 +40,8 @@ export default function ProductsPage() {
     const filteredProducts = products.filter((product) => {
         const matchesCategory = selectedCategory === "All" || product.category === selectedCategory
         const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase())
-        const isAvailable = product.status !== 'out_of_stock'
+        // Assuming stock > 0 means available for now
+        const isAvailable = product.stock > 0
         return matchesCategory && matchesSearch && isAvailable
     })
 
@@ -36,6 +55,14 @@ export default function ProductsPage() {
             "Item": "from-cyan-600 to-blue-600",
         }
         return gradients[category] || "from-blue-600 to-purple-600"
+    }
+
+    if (loading) {
+        return (
+            <div className="flex h-screen w-full items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        )
     }
 
     return (
@@ -104,9 +131,9 @@ export default function ProductsPage() {
 
                             <CardHeader className="pb-2 md:pb-4 px-2 md:px-6 pt-2 md:pt-6">
                                 <div className="aspect-[4/3] md:aspect-square bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 rounded-md md:rounded-lg mb-1.5 md:mb-4 flex items-center justify-center text-muted-foreground relative overflow-hidden group-hover:scale-105 transition-transform">
-                                    {product.image ? (
+                                    {product.image_url ? (
                                         <Image
-                                            src={product.image}
+                                            src={product.image_url}
                                             alt={product.name}
                                             fill
                                             className="object-cover"
@@ -143,7 +170,7 @@ export default function ProductsPage() {
                                 <Button
                                     asChild
                                     className="w-full gradient-primary group/btn h-7 md:h-10 text-[10px] md:text-sm px-2"
-                                    disabled={product.status === 'out_of_stock'}
+                                    disabled={product.stock <= 0}
                                 >
                                     <Link href={`/products/${product.id}`}>
                                         <ShoppingBag className="mr-0.5 md:mr-2 h-2.5 w-2.5 md:h-4 md:w-4" />
