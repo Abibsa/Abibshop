@@ -31,10 +31,11 @@
 - ✅ Order tracking system
 
 ### 🔐 **Authentication & Authorization**
+- ✅ Supabase Authentication
 - ✅ Login system (Admin & User)
 - ✅ Protected routes
 - ✅ Role-based access control
-- ✅ Persistent authentication (localStorage)
+- ✅ Secure session management
 
 ### 📊 **Admin Dashboard**
 - ✅ Statistics cards dengan gradient
@@ -49,6 +50,7 @@
 ### Prerequisites
 - Node.js 18+ 
 - npm atau yarn
+- Akun Supabase (gratis di [supabase.com](https://supabase.com))
 
 ### Installation
 
@@ -61,8 +63,42 @@ cd abibshop
 
 # Install dependencies
 npm install
+```
 
-# Run development server
+### Setup Supabase
+
+1. **Buat Project di Supabase**
+   - Buka [supabase.com](https://supabase.com) dan login
+   - Klik "New Project"
+   - Isi nama project dan password database
+   - Pilih region terdekat (Southeast Asia - Singapore)
+
+2. **Setup Database**
+   - Buka "SQL Editor" di dashboard Supabase
+   - Copy isi file `supabase/schema.sql`
+   - Paste dan run di SQL Editor
+   - Tunggu sampai selesai
+
+3. **Setup Environment Variables**
+   - Buat file `.env.local` di root folder
+   - Copy API keys dari Supabase Dashboard → Settings → API
+   - Isi file `.env.local`:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+   ```
+
+4. **Buat Admin User**
+   - Buka "Authentication" → "Users" di Supabase
+   - Klik "Add user" → "Create new user"
+   - Email: `admin@abibshop.com`, Password: `admin123`
+   - Centang "Auto Confirm User"
+   - Setelah dibuat, buka "Table Editor" → "profiles"
+   - Edit user tersebut, ubah `role` menjadi `admin`
+
+5. **Run Development Server**
+```bash
 npm run dev
 ```
 
@@ -99,14 +135,27 @@ abibshop/
 │   ├── login/               # Authentication
 │   ├── admin/               # Admin dashboard
 │   └── api/                 # API routes
+│       ├── products/        # Product API
+│       └── orders/          # Order API
 ├── components/              # Reusable components
 │   ├── Navbar.tsx
 │   ├── Footer.tsx
 │   └── ui/                  # ShadCN components
 ├── lib/                     # Utilities & stores
-│   ├── auth-store.ts        # Authentication state
+│   ├── supabase/            # Supabase clients
+│   │   ├── client.ts        # Browser client
+│   │   ├── server.ts        # Server client
+│   │   ├── middleware.ts    # Session management
+│   │   └── database.types.ts # TypeScript types
 │   ├── store.ts             # Cart state
-│   └── data.ts              # Mock data
+│   └── utils.ts             # Utilities
+├── services/                # Service layer
+│   ├── auth.service.ts      # Auth operations
+│   ├── product.service.ts   # Product operations
+│   └── order.service.ts     # Order operations
+├── supabase/
+│   └── schema.sql           # Database schema
+├── middleware.ts            # Next.js middleware
 └── public/                  # Static assets
 ```
 
@@ -122,10 +171,12 @@ abibshop/
 - **Icons**: Lucide React
 - **State Management**: Zustand
 
-### Backend (Planned)
-- **Database**: Supabase / Firebase
-- **Payment Gateway**: Tripay / Midtrans
-- **Authentication**: NextAuth.js
+### Backend ✅
+- **Database**: Supabase (PostgreSQL)
+- **Authentication**: Supabase Auth
+- **Storage**: Supabase Storage
+- **Real-time**: Supabase Realtime
+- **Payment Gateway**: Tripay / Midtrans (Coming Soon)
 
 ---
 
@@ -193,8 +244,10 @@ npm run lint
 - [x] Product Catalog
 - [x] Admin Dashboard
 
-### Phase 2 (Next)
-- [ ] Backend Integration (Supabase)
+### Phase 2 (Current) 🚧
+- [x] Backend Integration (Supabase)
+- [x] Database Schema & RLS
+- [x] API Routes
 - [ ] Real Payment Gateway
 - [ ] Email Notifications
 - [ ] WhatsApp Integration
