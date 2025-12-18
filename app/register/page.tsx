@@ -54,7 +54,7 @@ export default function RegisterPage() {
         setLoading(true)
 
         try {
-            await authService.signUp(email, password, fullName)
+            await authService.signUp(email.trim(), password, fullName.trim())
             setSuccess(true)
             // Bisa redirect setelah delay atau biarkan user baca pesan
             setTimeout(() => {
