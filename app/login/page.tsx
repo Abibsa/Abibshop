@@ -126,16 +126,7 @@ export default function LoginPage() {
                                 </div>
                             </div>
 
-                            <div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <Sparkles className="h-4 w-4 text-primary" />
-                                    <p className="font-semibold text-sm">Demo Account:</p>
-                                </div>
-                                <div className="space-y-1 text-sm text-muted-foreground">
-                                    <p className="font-mono">Admin: azizabib22@gmail.com</p>
-                                    <p className="font-mono text-xs">Password: nmc.jockers</p>
-                                </div>
-                            </div>
+
                         </CardContent>
 
                         <CardFooter>
