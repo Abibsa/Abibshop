@@ -9,22 +9,25 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, Lock, Mail } from "lucide-react"
+import { Loader2, Lock, Mail, User } from "lucide-react"
 
-export default function LoginPage() {
+export default function RegisterPage() {
     const router = useRouter()
+    const [fullName, setFullName] = useState("")
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
+    const [confirmPassword, setConfirmPassword] = useState("")
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState("")
+    const [success, setSuccess] = useState(false)
 
-    // Cek jika user sudah login saat buka halaman ini
+    // Cek jika user sudah login
     useEffect(() => {
         const checkSession = async () => {
             try {
                 const user = await authService.getCurrentUser()
                 if (user) {
-                    router.replace('/') // Auto redirect ke home
+                    router.replace('/')
                 }
             } catch (e) {
                 // No session, stay here
@@ -36,33 +39,61 @@ export default function LoginPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setError("")
+        setSuccess(false)
+
+        if (password !== confirmPassword) {
+            setError("Password tidak cocok!")
+            return
+        }
+
+        if (password.length < 6) {
+            setError("Password minimal 6 karakter")
+            return
+        }
+
         setLoading(true)
 
         try {
-            const { user } = await authService.signIn(email, password)
-
-            if (user) {
-                // Login sukses! Cek role sebentar
-                try {
-                    const profile = await authService.getProfile(user.id)
-                    if (profile?.role === 'admin') {
-                        router.push('/admin')
-                        router.refresh()
-                        return
-                    }
-                } catch (e) {
-                    console.log("Profile check failed, redirecting to home")
-                }
-
-                // Default redirect
-                router.push('/')
-                router.refresh()
-            }
+            await authService.signUp(email, password, fullName)
+            setSuccess(true)
+            // Bisa redirect setelah delay atau biarkan user baca pesan
+            setTimeout(() => {
+                router.push('/login')
+            }, 2000)
         } catch (err: any) {
-            console.error('Login error:', err)
-            setError(err.message || "Email atau password salah!")
-            setLoading(false) // Stop loading only on error
+            console.error('Register error:', err)
+            setError(err.message || "Gagal mendaftar. Silakan coba lagi.")
+        } finally {
+            setLoading(false)
         }
+    }
+
+    if (success) {
+        return (
+            <div className="relative min-h-[calc(100vh-200px)] flex items-center justify-center py-10 overflow-hidden">
+                <div className="absolute inset-0 gradient-mesh opacity-30" />
+                <div className="absolute inset-0 bg-gradient-to-b from-background/50 to-background" />
+
+                <div className="container relative z-10 px-4">
+                    <Card className="w-full max-w-md mx-auto border-2 shadow-2xl animate-scale-in text-center">
+                        <CardHeader>
+                            <div className="mx-auto w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4">
+                                <User className="h-8 w-8 text-green-600 dark:text-green-400" />
+                            </div>
+                            <CardTitle className="text-2xl font-bold text-green-600 dark:text-green-400">Pendaftaran Berhasil!</CardTitle>
+                            <CardDescription>
+                                Akun Anda telah dibuat. Mengalihkan ke halaman login...
+                            </CardDescription>
+                        </CardHeader>
+                        <CardFooter className="justify-center">
+                            <Button asChild variant="outline">
+                                <Link href="/login">Login Sekarang</Link>
+                            </Button>
+                        </CardFooter>
+                    </Card>
+                </div>
+            </div>
+        )
     }
 
     return (
@@ -75,14 +106,14 @@ export default function LoginPage() {
                 <Card className="w-full max-w-md mx-auto border-2 shadow-2xl hover-lift animate-scale-in">
                     <CardHeader className="text-center space-y-4">
                         <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shadow-lg">
-                            <Lock className="h-8 w-8 text-white" />
+                            <User className="h-8 w-8 text-white" />
                         </div>
                         <div>
                             <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                                Login
+                                Daftar Akun
                             </CardTitle>
                             <CardDescription className="text-base mt-2">
-                                Masuk ke akun AbibShop Anda
+                                Buat akun baru di AbibShop
                             </CardDescription>
                         </div>
                     </CardHeader>
@@ -94,6 +125,22 @@ export default function LoginPage() {
                                     <AlertDescription>{error}</AlertDescription>
                                 </Alert>
                             )}
+
+                            <div className="space-y-2">
+                                <Label htmlFor="fullName" className="text-sm font-medium">Nama Lengkap</Label>
+                                <div className="relative">
+                                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        id="fullName"
+                                        type="text"
+                                        placeholder="Nama Lengkap Anda"
+                                        value={fullName}
+                                        onChange={(e) => setFullName(e.target.value)}
+                                        className="pl-10"
+                                        required
+                                    />
+                                </div>
+                            </div>
 
                             <div className="space-y-2">
                                 <Label htmlFor="email" className="text-sm font-medium">Email</Label>
@@ -112,12 +159,7 @@ export default function LoginPage() {
                             </div>
 
                             <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <Label htmlFor="password" className="text-sm font-medium">Password</Label>
-                                    <Link href="/auth/reset-password" className="text-xs text-primary hover:underline">
-                                        Lupa password?
-                                    </Link>
-                                </div>
+                                <Label htmlFor="password" className="text-sm font-medium">Password</Label>
                                 <div className="relative">
                                     <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                                     <Input
@@ -128,6 +170,24 @@ export default function LoginPage() {
                                         onChange={(e) => setPassword(e.target.value)}
                                         className="pl-10"
                                         required
+                                        minLength={6}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="confirmPassword" className="text-sm font-medium">Konfirmasi Password</Label>
+                                <div className="relative">
+                                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        id="confirmPassword"
+                                        type="password"
+                                        placeholder="••••••••"
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        className="pl-10"
+                                        required
+                                        minLength={6}
                                     />
                                 </div>
                             </div>
@@ -140,13 +200,13 @@ export default function LoginPage() {
                                 disabled={loading}
                             >
                                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                {loading ? "Memproses..." : "Login"}
+                                {loading ? "Mendaftar..." : "Daftar Sekarang"}
                             </Button>
 
                             <p className="text-center text-sm text-muted-foreground">
-                                Belum punya akun?{" "}
-                                <Link href="/register" className="font-semibold text-primary hover:underline">
-                                    Daftar sekarang
+                                Sudah punya akun?{" "}
+                                <Link href="/login" className="font-semibold text-primary hover:underline">
+                                    Login disini
                                 </Link>
                             </p>
                         </CardFooter>
