@@ -212,6 +212,15 @@ export class ProductService {
 
         return this.updateStock(id, product.stock - quantity)
     }
+    /**
+     * Subscribe to product changes (Realtime)
+     */
+    subscribeToProducts(callback: () => void) {
+        return this.supabase
+            .channel('public:products')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, callback)
+            .subscribe()
+    }
 }
 
 export const productService = new ProductService()

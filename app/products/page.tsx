@@ -31,7 +31,18 @@ function ProductsContent() {
                 setLoading(false)
             }
         }
+
         fetchProducts()
+
+        // Realtime Subscription
+        const channel = productService.subscribeToProducts(() => {
+            console.log("⚡ Realtime update received!")
+            fetchProducts()
+        })
+
+        return () => {
+            channel.unsubscribe()
+        }
     }, [])
 
     useEffect(() => {
