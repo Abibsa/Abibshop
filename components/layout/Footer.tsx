@@ -88,18 +88,18 @@ export default function Footer() {
                                 <h4 className="mb-4 text-sm font-bold text-foreground">Layanan</h4>
                                 <ul className="space-y-2.5 text-xs md:text-sm">
                                     <li>
-                                        <Link href="/products" className="text-muted-foreground hover:text-primary transition-colors inline-flex items-center group">
-                                            <span className="group-hover:translate-x-1 transition-transform">Robux 5 Hari</span>
+                                        <Link href="/products?category=Robux" className="text-muted-foreground hover:text-primary transition-colors inline-flex items-center group">
+                                            <span className="group-hover:translate-x-1 transition-transform">Top Up Robux</span>
+                                        </Link>
+                                    </li>
+                                    <li>
+                                        <Link href="/products?category=Premium" className="text-muted-foreground hover:text-primary transition-colors inline-flex items-center group">
+                                            <span className="group-hover:translate-x-1 transition-transform">Roblox Premium</span>
                                         </Link>
                                     </li>
                                     <li>
                                         <Link href="/products" className="text-muted-foreground hover:text-primary transition-colors inline-flex items-center group">
-                                            <span className="group-hover:translate-x-1 transition-transform">Robux Gift Card</span>
-                                        </Link>
-                                    </li>
-                                    <li>
-                                        <Link href="/products" className="text-muted-foreground hover:text-primary transition-colors inline-flex items-center group">
-                                            <span className="group-hover:translate-x-1 transition-transform">Robux Via Login</span>
+                                            <span className="group-hover:translate-x-1 transition-transform">Semua Produk</span>
                                         </Link>
                                     </li>
                                 </ul>

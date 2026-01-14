@@ -62,7 +62,18 @@ export default function RegisterPage() {
             }, 2000)
         } catch (err: any) {
             console.error('Register error:', err)
-            setError(err.message || "Gagal mendaftar. Silakan coba lagi.")
+            let message = err.message || "Gagal mendaftar. Silakan coba lagi.";
+
+            // Translate common errors
+            if (message.toLowerCase().includes("email address") && message.toLowerCase().includes("is invalid")) {
+                message = "Email tidak valid. Pastikan format benar dan domain diizinkan.";
+            } else if (message.includes("User already registered")) {
+                message = "Email sudah terdaftar. Silakan login.";
+            } else if (message.includes("Password should be at least")) {
+                message = "Password terlalu pendek.";
+            }
+
+            setError(message)
         } finally {
             setLoading(false)
         }

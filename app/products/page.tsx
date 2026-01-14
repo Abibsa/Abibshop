@@ -1,8 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, Suspense } from "react"
 import Image from "next/image"
+import { useSearchParams } from "next/navigation"
 import { productService } from "@/services/product.service"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -12,7 +13,8 @@ import { Database } from "@/lib/supabase/database.types"
 
 type Product = Database['public']['Tables']['products']['Row']
 
-export default function ProductsPage() {
+function ProductsContent() {
+    const searchParams = useSearchParams()
     const [products, setProducts] = useState<Product[]>([])
     const [loading, setLoading] = useState(true)
     const [selectedCategory, setSelectedCategory] = useState("All")
@@ -32,6 +34,13 @@ export default function ProductsPage() {
         fetchProducts()
     }, [])
 
+    useEffect(() => {
+        const category = searchParams.get("category")
+        if (category) {
+            setSelectedCategory(category)
+        }
+    }, [searchParams])
+
     const categories = useMemo(() => {
         const uniqueCategories = Array.from(new Set(products.map(p => p.category)))
         return ["All", ...uniqueCategories]
@@ -48,6 +57,7 @@ export default function ProductsPage() {
     const getCategoryGradient = (category: string) => {
         const gradients: Record<string, string> = {
             "All": "from-blue-600 to-purple-600",
+            "Robux": "from-purple-600 to-pink-600",
             "Robux 5 Hari": "from-purple-600 to-pink-600",
             "Robux Gift Card": "from-pink-600 to-red-600",
             "Robux Via Login": "from-orange-600 to-yellow-600",
@@ -194,5 +204,17 @@ export default function ProductsPage() {
                 )}
             </div>
         </div>
+    )
+}
+
+export default function ProductsPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex h-screen w-full items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        }>
+            <ProductsContent />
+        </Suspense>
     )
 }

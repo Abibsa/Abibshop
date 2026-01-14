@@ -8,6 +8,34 @@ type ProductUpdate = Database['public']['Tables']['products']['Update']
 export class ProductService {
     private supabase = createClient()
 
+    // Offline fallback data matching user's new pricing
+    private fallbackData: Product[] = [
+        {
+            id: 'fallback-1', name: '400 Robux', description: 'Top up 400 Robux instant', category: 'Robux',
+            price: 75000, original_price: 75000, stock: 100, is_active: true, is_featured: true, image_url: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), discount: 0, metadata: {}
+        },
+        {
+            id: 'fallback-2', name: '800 Robux', description: 'Top up 800 Robux instant', category: 'Robux',
+            price: 140000, original_price: 140000, stock: 100, is_active: true, is_featured: true, image_url: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), discount: 0, metadata: {}
+        },
+        {
+            id: 'fallback-3', name: '1000 Robux', description: 'Top up 1000 Robux instant', category: 'Robux',
+            price: 165000, original_price: 165000, stock: 100, is_active: true, is_featured: true, image_url: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), discount: 0, metadata: {}
+        },
+        {
+            id: 'fallback-4', name: '1200 Robux', description: 'Top up 1200 Robux instant', category: 'Robux',
+            price: 229990, original_price: 229990, stock: 100, is_active: true, is_featured: true, image_url: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), discount: 0, metadata: {}
+        },
+        {
+            id: 'fallback-5', name: '1600 Robux', description: 'Top up 1600 Robux instant', category: 'Robux',
+            price: 307440, original_price: 307440, stock: 100, is_active: true, is_featured: true, image_url: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), discount: 0, metadata: {}
+        },
+        {
+            id: 'fallback-6', name: 'Premium 450 Robux', description: 'Roblox Premium 1 Month', category: 'Premium',
+            price: 75000, original_price: 90000, stock: 50, is_active: true, is_featured: false, image_url: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), discount: 17, metadata: {}
+        }
+    ]
+
     /**
      * Get all active products
      */
@@ -36,7 +64,18 @@ export class ProductService {
 
         const { data, error } = await query
 
-        if (error) throw error
+        if (error) {
+            console.warn("⚠️ Database connection failed. Using OFFLINE MODE with fallback data.")
+            // Filter fallback data based on requested filters
+            let filtered = [...this.fallbackData]
+            if (filters?.category) filtered = filtered.filter(p => p.category === filters.category)
+            if (filters?.featured !== undefined) filtered = filtered.filter(p => p.is_featured === filters.featured)
+            if (filters?.search) {
+                const search = filters.search
+                filtered = filtered.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
+            }
+            return filtered
+        }
         return data as Product[]
     }
 
@@ -44,6 +83,12 @@ export class ProductService {
      * Get product by ID
      */
     async getProductById(id: string) {
+        // If it's a fallback ID, return immediately from local data
+        if (id.startsWith('fallback-')) {
+            const fallback = this.fallbackData.find(p => p.id === id)
+            if (fallback) return fallback
+        }
+
         const { data, error } = await this.supabase
             .from('products')
             .select('*')
@@ -51,7 +96,13 @@ export class ProductService {
             .eq('is_active', true)
             .single()
 
-        if (error) throw error
+        if (error) {
+            // Also check fallback data if DB fails, though ID might not match unless we are lucky or it is a fallback ID caught by error
+            console.warn(`⚠️ Error fetching product ${id}. Checking fallback...`)
+            const fallback = this.fallbackData.find(p => p.id === id)
+            if (fallback) return fallback
+            throw error // If not found in fallback, throw original error
+        }
         return data as Product
     }
 
@@ -67,7 +118,10 @@ export class ProductService {
             .order('created_at', { ascending: false })
             .limit(limit)
 
-        if (error) throw error
+        if (error) {
+            console.warn("⚠️ Database connection failed (Featured). Using OFFLINE MODE.")
+            return this.fallbackData.filter(p => p.is_featured).slice(0, limit)
+        }
         return data as Product[]
     }
 
@@ -82,7 +136,10 @@ export class ProductService {
             .eq('is_active', true)
             .order('price', { ascending: true })
 
-        if (error) throw error
+        if (error) {
+            console.warn(`⚠️ Database connection failed (Category ${category}). Using OFFLINE MODE.`)
+            return this.fallbackData.filter(p => p.category === category)
+        }
         return data as Product[]
     }
 

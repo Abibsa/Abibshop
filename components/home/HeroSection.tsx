@@ -25,38 +25,38 @@ export default function HeroSection() {
         {
             id: 2,
             type: "product",
-            title: "Robux 5 Hari",
-            subtitle: "Proses Cepat & Aman",
-            description: "Harga termurah, stok ready, dan pengiriman otomatis.",
-            image: "/images/robux-5-hari.png",
+            title: "Top Up Robux",
+            subtitle: "Proses Kilat & Aman",
+            description: "Dapatkan Robux instan dengan harga termurah. Tersedia berbagai nominal mulai dari 400 Robux.",
+            image: "/images/robux-5-hari.png", // Keep existing placeholder or update if available
             color: "from-purple-600 to-pink-600",
             bgGlow: "bg-purple-500/20",
-            icon: <Clock className="h-5 w-5" />,
-            primaryBtn: { text: "Beli Robux 5 Hari", href: "/products?category=Robux%205%20Hari" }
+            icon: <Zap className="h-5 w-5" />,
+            primaryBtn: { text: "Beli Robux", href: "/products?category=Robux" }
         },
         {
             id: 3,
             type: "product",
-            title: "Robux Gift Card",
-            subtitle: "Instant Delivery",
-            description: "Kode redeem langsung dikirim detik itu juga. Tanpa menunggu.",
-            image: "/images/robux-gift-card.png",
-            color: "from-blue-600 to-cyan-600",
-            bgGlow: "bg-blue-500/20",
-            icon: <Gift className="h-5 w-5" />,
-            primaryBtn: { text: "Beli Gift Card", href: "/products?category=Robux%20Gift%20Card" }
+            title: "Roblox Premium",
+            subtitle: "Membership Resmi",
+            description: "Langganan Premium bulanan. Dapat Robux bulanan + diskon di catalog + fitur eksklusif.",
+            image: "/images/robux-gift-card.png", // Placeholder
+            color: "from-yellow-500 to-orange-500",
+            bgGlow: "bg-orange-500/20",
+            icon: <Award className="h-5 w-5" />,
+            primaryBtn: { text: "Beli Premium", href: "/products?category=Premium" }
         },
         {
             id: 4,
             type: "product",
-            title: "Robux Via Login",
-            subtitle: "Praktis & Mudah",
-            description: "Top up langsung ke akunmu. Proses cepat dan aman 100%.",
-            image: "/images/robux-via-login.png",
-            color: "from-orange-500 to-red-500",
-            bgGlow: "bg-orange-500/20",
-            icon: <Zap className="h-5 w-5" />,
-            primaryBtn: { text: "Beli Via Login", href: "/products?category=Robux%20Via%20Login" }
+            title: "Jaminan Garansi",
+            subtitle: "100% Legal & Aman",
+            description: "Semua transaksi di AbibShop bergaransi. Jika ada kendala, CS kami siap membantu 24/7.",
+            image: "/images/robux-via-login.png", // Placeholder
+            color: "from-blue-600 to-cyan-600",
+            bgGlow: "bg-blue-500/20",
+            icon: <Star className="h-5 w-5" />,
+            primaryBtn: { text: "Lihat Semua", href: "/products" }
         }
     ]
 
@@ -281,8 +281,8 @@ export default function HeroSection() {
                                 key={index}
                                 onClick={() => setCurrentSlide(index)}
                                 className={`h-2 md:h-2.5 rounded-full transition-all duration-500 ${currentSlide === index
-                                        ? "w-6 md:w-10 bg-primary"
-                                        : "w-2 md:w-2.5 bg-primary/20 hover:bg-primary/40"
+                                    ? "w-6 md:w-10 bg-primary"
+                                    : "w-2 md:w-2.5 bg-primary/20 hover:bg-primary/40"
                                     }`}
                                 aria-label={`Go to slide ${index + 1}`}
                             />

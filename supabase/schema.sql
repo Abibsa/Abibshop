@@ -298,12 +298,11 @@ INSERT INTO public.categories (name, slug, description, icon, color, sort_order)
 
 -- Insert sample products
 INSERT INTO public.products (name, description, category, price, original_price, discount, stock, is_featured, metadata) VALUES
-  ('80 Robux', 'Top up 80 Robux instant', 'Robux', 15000, 20000, 25, 1000, true, '{"delivery_time": "instant", "bonus": 0}'),
-  ('400 Robux', 'Top up 400 Robux instant', 'Robux', 70000, 85000, 18, 1000, true, '{"delivery_time": "instant", "bonus": 0}'),
-  ('800 Robux', 'Top up 800 Robux instant + Bonus', 'Robux', 135000, 160000, 16, 1000, true, '{"delivery_time": "instant", "bonus": 50}'),
-  ('1700 Robux', 'Top up 1700 Robux instant + Bonus', 'Robux', 270000, 320000, 16, 1000, true, '{"delivery_time": "instant", "bonus": 100}'),
-  ('4500 Robux', 'Top up 4500 Robux instant + Bonus', 'Robux', 680000, 800000, 15, 500, false, '{"delivery_time": "instant", "bonus": 300}'),
-  ('10000 Robux', 'Top up 10000 Robux instant + Bonus', 'Robux', 1450000, 1700000, 15, 500, false, '{"delivery_time": "instant", "bonus": 750}'),
+  ('400 Robux', 'Top up 400 Robux instant', 'Robux', 75000, 75000, 0, 1000, true, '{"delivery_time": "instant", "bonus": 0}'),
+  ('800 Robux', 'Top up 800 Robux instant', 'Robux', 140000, 140000, 0, 1000, true, '{"delivery_time": "instant", "bonus": 0}'),
+  ('1000 Robux', 'Top up 1000 Robux instant', 'Robux', 165000, 165000, 0, 1000, true, '{"delivery_time": "instant", "bonus": 0}'),
+  ('1200 Robux', 'Top up 1200 Robux instant', 'Robux', 229990, 229990, 0, 1000, true, '{"delivery_time": "instant", "bonus": 0}'),
+  ('1600 Robux', 'Top up 1600 Robux instant', 'Robux', 307440, 307440, 0, 1000, true, '{"delivery_time": "instant", "bonus": 0}'),
   ('Premium 450 Robux/Month', 'Roblox Premium membership', 'Premium', 75000, 90000, 17, 100, false, '{"duration": "1 month", "robux_per_month": 450}'),
   ('Premium 1000 Robux/Month', 'Roblox Premium membership', 'Premium', 150000, 180000, 17, 100, false, '{"duration": "1 month", "robux_per_month": 1000}'),
   ('Premium 2200 Robux/Month', 'Roblox Premium membership', 'Premium', 300000, 360000, 17, 100, false, '{"duration": "1 month", "robux_per_month": 2200}');

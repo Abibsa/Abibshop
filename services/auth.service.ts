@@ -12,15 +12,41 @@ export class AuthService {
      * Sign up with email and password
      */
     async signUp(email: string, password: string, fullName?: string) {
-        const { data, error } = await this.supabase.auth.signUp({
-            email,
+        // Sanitize email and remove any potential non-printable characters
+        const cleanEmail = email.trim().toLowerCase().replace(/[^\x20-\x7E]/g, '');
+
+        // Browser compatible hex logging
+        const hexEmail = Array.from(new TextEncoder().encode(cleanEmail))
+            .map(b => b.toString(16).padStart(2, '0'))
+            .join(' ');
+
+        console.log('SignUp Diagnostics:', {
+            email: cleanEmail,
+            hex: hexEmail,
+            length: cleanEmail.length,
+            url: process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 30) + '...'
+        });
+
+        const payload = {
+            email: cleanEmail,
             password,
             options: {
                 data: {
                     full_name: fullName,
                 },
             },
-        })
+        };
+
+        const { data, error } = await this.supabase.auth.signUp(payload)
+
+        if (error) {
+            console.error('Supabase SignUp Error (Details):', {
+                message: error.message,
+                status: error.status,
+                code: error.code,
+                email_sent: cleanEmail
+            });
+        }
 
         if (error) throw error
 
