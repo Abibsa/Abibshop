@@ -25,38 +25,14 @@ export default function HeroSection() {
         {
             id: 2,
             type: "product",
-            title: "Top Up Robux",
-            subtitle: "Proses Kilat & Aman",
-            description: "Dapatkan Robux instan dengan harga termurah. Tersedia berbagai nominal mulai dari 400 Robux.",
-            image: "/images/robux-5-hari.png", // Keep existing placeholder or update if available
+            title: "Robux Gift",
+            subtitle: "Tanpa Login Akun",
+            description: "Cara teraman & tercepat isi Robux. Langsung masuk tanpa harus menunggu 5 hari.",
+            image: "/images/robux-gift-card.png", // Update image placeholder if needed
             color: "from-purple-600 to-pink-600",
             bgGlow: "bg-purple-500/20",
-            icon: <Zap className="h-5 w-5" />,
-            primaryBtn: { text: "Beli Robux", href: "/products?category=Robux" }
-        },
-        {
-            id: 3,
-            type: "product",
-            title: "Roblox Premium",
-            subtitle: "Membership Resmi",
-            description: "Langganan Premium bulanan. Dapat Robux bulanan + diskon di catalog + fitur eksklusif.",
-            image: "/images/robux-gift-card.png", // Placeholder
-            color: "from-yellow-500 to-orange-500",
-            bgGlow: "bg-orange-500/20",
-            icon: <Award className="h-5 w-5" />,
-            primaryBtn: { text: "Beli Premium", href: "/products?category=Premium" }
-        },
-        {
-            id: 4,
-            type: "product",
-            title: "Jaminan Garansi",
-            subtitle: "100% Legal & Aman",
-            description: "Semua transaksi di AbibShop bergaransi. Jika ada kendala, CS kami siap membantu 24/7.",
-            image: "/images/robux-via-login.png", // Placeholder
-            color: "from-blue-600 to-cyan-600",
-            bgGlow: "bg-blue-500/20",
-            icon: <Star className="h-5 w-5" />,
-            primaryBtn: { text: "Lihat Semua", href: "/products" }
+            icon: <Gift className="h-5 w-5" />,
+            primaryBtn: { text: "Beli Robux", href: "/products?category=Robux%20Gift%20Card" }
         }
     ]
 

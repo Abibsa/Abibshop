@@ -8,31 +8,19 @@ type ProductUpdate = Database['public']['Tables']['products']['Update']
 export class ProductService {
     private supabase = createClient()
 
-    // Offline fallback data matching user's new pricing
     private fallbackData: Product[] = [
+        // New Gift Method (Highlights)
         {
-            id: 'fallback-1', name: '400 Robux', description: 'Top up 400 Robux instant', category: 'Robux',
-            price: 75000, original_price: 75000, stock: 100, is_active: true, is_featured: true, image_url: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), discount: 0, metadata: {}
+            id: 'gift-400', name: '400 Robux Gift', description: 'Via Gift (Tanpa Login) - Langsung Masuk', category: 'Robux Gift Card',
+            price: 85000, original_price: 85000, stock: 500, is_active: true, is_featured: true, image_url: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), discount: 0, metadata: {}
         },
         {
-            id: 'fallback-2', name: '800 Robux', description: 'Top up 800 Robux instant', category: 'Robux',
-            price: 140000, original_price: 140000, stock: 100, is_active: true, is_featured: true, image_url: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), discount: 0, metadata: {}
+            id: 'gift-800', name: '800 Robux Gift', description: 'Via Gift (Tanpa Login) - Langsung Masuk', category: 'Robux Gift Card',
+            price: 150000, original_price: 150000, stock: 500, is_active: true, is_featured: true, image_url: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), discount: 0, metadata: {}
         },
         {
-            id: 'fallback-3', name: '1000 Robux', description: 'Top up 1000 Robux instant', category: 'Robux',
-            price: 165000, original_price: 165000, stock: 100, is_active: true, is_featured: true, image_url: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), discount: 0, metadata: {}
-        },
-        {
-            id: 'fallback-4', name: '1200 Robux', description: 'Top up 1200 Robux instant', category: 'Robux',
-            price: 229990, original_price: 229990, stock: 100, is_active: true, is_featured: true, image_url: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), discount: 0, metadata: {}
-        },
-        {
-            id: 'fallback-5', name: '1600 Robux', description: 'Top up 1600 Robux instant', category: 'Robux',
-            price: 307440, original_price: 307440, stock: 100, is_active: true, is_featured: true, image_url: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), discount: 0, metadata: {}
-        },
-        {
-            id: 'fallback-6', name: 'Premium 450 Robux', description: 'Roblox Premium 1 Month', category: 'Premium',
-            price: 75000, original_price: 90000, stock: 50, is_active: true, is_featured: false, image_url: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), discount: 17, metadata: {}
+            id: 'gift-1000', name: '1000 Robux Gift', description: 'Via Gift (Tanpa Login) - Langsung Masuk', category: 'Robux Gift Card',
+            price: 175000, original_price: 175000, stock: 500, is_active: true, is_featured: true, image_url: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), discount: 0, metadata: {}
         }
     ]
 
