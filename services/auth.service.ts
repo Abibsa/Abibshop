@@ -123,9 +123,30 @@ export class AuthService {
             .from('profiles')
             .select('*')
             .eq('id', userId)
-            .single()
+            .maybeSingle()
 
-        if (error) throw error
+        if (error) {
+            console.error("getProfile error:", JSON.stringify(error))
+            throw error
+        }
+
+        if (!data) {
+            console.warn("Profile not found in database for user:", userId)
+
+            // Return default profile with 'user' role
+            // Admin role must be set in DB via Supabase Dashboard
+            return {
+                id: userId,
+                role: 'user',
+                email: '',
+                full_name: null,
+                phone: null,
+                avatar_url: null,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            } as Profile
+        }
+
         return data as Profile
     }
 
@@ -148,8 +169,15 @@ export class AuthService {
      * Check if user is admin
      */
     async isAdmin(userId: string) {
-        const profile = await this.getProfile(userId)
-        return profile.role === 'admin'
+        try {
+            const profile = await this.getProfile(userId)
+            return profile.role === 'admin'
+        } catch (error) {
+            console.error("isAdmin check failed:", error);
+            // Fallback to checking jwt if profile fetch fails
+            const session = await this.getSession();
+            return session?.user?.app_metadata?.role === 'admin' || false;
+        }
     }
 
     /**

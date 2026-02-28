@@ -3,6 +3,7 @@
 import { useCartStore } from "@/lib/store"
 import { authService } from "@/services/auth.service"
 import { orderService } from "@/services/order.service"
+import { processCheckout } from "./actions"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -182,43 +183,22 @@ export default function CheckoutPage() {
         setIsProcessing(true)
 
         try {
-            const newOrderIds: string[] = []
+            const checkoutData = {
+                items: items,
+                email,
+                whatsapp,
+                paymentMethod: selectedPayment.name
+            }
 
-            // Create orders sequentially
-            for (const item of items) {
-                const orderData = {
-                    user_id: user?.id || null, // Allow guest checkout if needed, or null
-                    customer_name: user?.name || 'Guest',
-                    customer_email: email,
-                    customer_whatsapp: whatsapp, // Using whatsapp field mapped to DB schema? Check schema: it has customer_whatsapp
-                    product_id: item.productId,
-                    product_name: item.productName,
-                    product_price: item.price,
-                    quantity: 1,
-                    game_username: item.username,
-                    game_user_id: null,
-                    total_amount: item.price, // Calculating per item total roughly. Ideally should distribute fees but simple is fine.
-                    payment_method: selectedPayment.name,
-                    payment_status: 'pending' as const,
-                    status: 'pending' as const,
-                    metadata: {}
-                }
+            const result = await processCheckout(checkoutData)
 
-                // Note: Real implementation might group items into one 'Payment Transaction', but here we create individual orders per item based on schema
-                // But wait, schema has total_amount per order.
-                // Let's create one order per item as per old logic.
-                // We should add fees to the first item or distribute them. 
-                // For simplicity, let's just use item price for now and ignore fees in DB record to avoid complexity, or add service fee to first item.
-
-                const newOrder = await orderService.createOrder(orderData)
-                if (newOrder) {
-                    newOrderIds.push(newOrder.order_number)
-                }
+            if (!result.success) {
+                toast.error(result.error)
+                return
             }
 
             clearCart()
-            const orderIdsParam = newOrderIds.join(',')
-            router.push(`/my-orders`) // Redirect to my-orders instead of checkout/success for now as success page logic might need update too
+            router.push(`/my-orders`)
             toast.success("Pesanan berhasil dibuat!")
 
         } catch (error) {

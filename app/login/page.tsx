@@ -24,6 +24,15 @@ export default function LoginPage() {
             try {
                 const user = await authService.getCurrentUser()
                 if (user) {
+                    try {
+                        const profile = await authService.getProfile(user.id)
+                        if (profile?.role === 'admin') {
+                            router.replace('/admin')
+                            return
+                        }
+                    } catch (e) {
+                        // silently fallback to home
+                    }
                     router.replace('/') // Auto redirect ke home
                 }
             } catch (e) {

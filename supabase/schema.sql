@@ -126,10 +126,21 @@ ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.order_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
 
--- Profiles policies
-CREATE POLICY "Public profiles are viewable by everyone"
+-- Drop old insecure policy if re-running
+DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON public.profiles;
+
+CREATE POLICY "Users can view own profile"
   ON public.profiles FOR SELECT
-  USING (true);
+  USING (auth.uid() = id);
+
+CREATE POLICY "Admins can view all profiles"
+  ON public.profiles FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid() AND role = 'admin'
+    )
+  );
 
 CREATE POLICY "Users can update own profile"
   ON public.profiles FOR UPDATE
@@ -160,9 +171,19 @@ CREATE POLICY "Users can view own orders"
     )
   );
 
-CREATE POLICY "Anyone can create orders"
+-- Drop old insecure policy if re-running
+DROP POLICY IF EXISTS "Anyone can create orders" ON public.orders;
+
+CREATE POLICY "Authenticated users can create own orders"
   ON public.orders FOR INSERT
-  WITH CHECK (true);
+  TO authenticated
+  WITH CHECK (
+    auth.uid() = user_id OR
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid() AND role = 'admin'
+    )
+  );
 
 CREATE POLICY "Admins can update orders"
   ON public.orders FOR UPDATE
@@ -212,6 +233,49 @@ CREATE POLICY "Admins can manage categories"
 -- =====================================================
 -- FUNCTIONS
 -- =====================================================
+-- ATOMIC STOCK FUNCTIONS (Race Condition Prevention)
+-- =====================================================
+
+-- Atomically decrease stock with row-level lock
+-- Returns TRUE if stock was sufficient and decreased, FALSE otherwise
+CREATE OR REPLACE FUNCTION decrease_stock_atomic(p_product_id UUID, p_quantity INT)
+RETURNS BOOLEAN AS $$
+DECLARE
+  current_stock INT;
+BEGIN
+  -- FOR UPDATE locks this specific row until transaction completes
+  SELECT stock INTO current_stock
+  FROM public.products
+  WHERE id = p_product_id
+  FOR UPDATE;
+
+  IF current_stock IS NULL THEN
+    RETURN FALSE; -- Product not found
+  END IF;
+
+  IF current_stock < p_quantity THEN
+    RETURN FALSE; -- Insufficient stock
+  END IF;
+
+  UPDATE public.products
+  SET stock = stock - p_quantity
+  WHERE id = p_product_id;
+
+  RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Restore stock (for rollback on failed checkout)
+CREATE OR REPLACE FUNCTION restore_stock(p_product_id UUID, p_quantity INT)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE public.products
+  SET stock = stock + p_quantity
+  WHERE id = p_product_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ==============================================
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
