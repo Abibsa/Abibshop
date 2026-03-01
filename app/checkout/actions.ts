@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { checkoutLimiter } from "@/lib/rate-limit"
+import { logError } from "@/lib/error-handler"
 import type { Database } from "@/lib/supabase/database.types"
 
 type OrderInsert = Database['public']['Tables']['orders']['Insert']
@@ -45,11 +46,17 @@ export async function processCheckout(data: {
 }) {
     // ── FIX 4: Full input validation ──
     const validationError = validateCheckoutInput(data)
-    if (validationError) return { success: false, error: validationError }
+    if (validationError) {
+        await logError(`Invalid checkout: ${validationError}`, 'warn', { action: 'checkout_validation', params: data })
+        return { success: false, error: validationError }
+    }
 
     // ── FIX 5: Rate limiting (5 checkouts per minute per email) ──
     const { success: rateLimitOk } = checkoutLimiter.check(5, data.email)
-    if (!rateLimitOk) return { success: false, error: "Terlalu banyak percobaan. Silakan tunggu 1 menit." }
+    if (!rateLimitOk) {
+        await logError('Rate limit exceeded', 'warn', { action: 'checkout_ratelimit', userId: data.email })
+        return { success: false, error: "Terlalu banyak percobaan. Silakan tunggu 1 menit." }
+    }
 
     // ── Get authenticated user (optional — guest checkout allowed) ──
     const supabaseSession = await createClient()
@@ -141,10 +148,15 @@ export async function processCheckout(data: {
 
         return { success: true, orderIds: newOrderIds }
     } catch (error: any) {
-        console.error("Checkout process error:", error)
+        await logError(error, 'critical', {
+            action: 'process_checkout',
+            userId: user?.id,
+            params: { email: data.email, totalItems: data.items.length }
+        })
+
         // Best-effort rollback
         await rollbackOrders(adminSupabase, createdOrderIds)
-        return { success: false, error: "Terjadi kesalahan internal. Silakan coba lagi." }
+        return { success: false, error: "Terjadi kesalahan internal. Tim engineer kami telah diberitahu." }
     }
 }
 

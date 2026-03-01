@@ -193,7 +193,14 @@ export default function CheckoutPage() {
             const result = await processCheckout(checkoutData)
 
             if (!result.success) {
-                toast.error(result.error)
+                toast.error(result.error, {
+                    description: "Jika masalah berlanjut, hubungi admin via WhatsApp.",
+                    action: {
+                        label: "Tanya Admin",
+                        onClick: () => window.open(`https://wa.me/6281234567890?text=Halo%20Admin,%20saya%20gagal%20checkout%20dengan%20error:%20${encodeURIComponent(result.error)}`, "_blank")
+                    },
+                    duration: 8000,
+                })
                 return
             }
 
@@ -201,9 +208,11 @@ export default function CheckoutPage() {
             router.push(`/my-orders`)
             toast.success("Pesanan berhasil dibuat!")
 
-        } catch (error) {
+        } catch (error: any) {
             console.error("Payment error:", error)
-            toast.error("Gagal memproses pesanan. Silakan coba lagi.")
+            toast.error("Gagal terhubung ke server.", {
+                description: "Pastikan koneksi internet Anda stabil dan coba lagi."
+            })
         } finally {
             setIsProcessing(false)
         }
