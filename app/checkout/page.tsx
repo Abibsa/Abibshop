@@ -197,7 +197,7 @@ export default function CheckoutPage() {
                     description: "Jika masalah berlanjut, hubungi admin via WhatsApp.",
                     action: {
                         label: "Tanya Admin",
-                        onClick: () => window.open(`https://wa.me/6281234567890?text=Halo%20Admin,%20saya%20gagal%20checkout%20dengan%20error:%20${encodeURIComponent(result.error)}`, "_blank")
+                        onClick: () => window.open(`https://wa.me/6281234567890?text=Halo%20Admin,%20saya%20gagal%20checkout%20dengan%20error:%20${encodeURIComponent(result.error || "Terjadi Kesalahan")}`, "_blank")
                     },
                     duration: 8000,
                 })
