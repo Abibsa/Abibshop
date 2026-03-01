@@ -55,6 +55,7 @@ export default function ProductsManagement() {
         image_url: "/images/robux.png",
         stock: 0
     })
+    const [isSubmitting, setIsSubmitting] = useState(false)
 
     const fetchProducts = async () => {
         try {
@@ -128,8 +129,18 @@ export default function ProductsManagement() {
     }
 
     const handleAddProduct = async () => {
+        if (!formData.name || !formData.category) {
+            toast.error("Nama dan Kategori wajib diisi")
+            return
+        }
+
+        setIsSubmitting(true)
         try {
-            const newProduct = await productService.createProduct(formData)
+            const newProduct = await productService.createProduct({
+                ...formData,
+                price: Number(formData.price),
+                stock: Number(formData.stock)
+            })
             setProducts([newProduct, ...products])
             setIsAddDialogOpen(false)
             setFormData({
@@ -141,9 +152,11 @@ export default function ProductsManagement() {
                 stock: 0
             })
             toast.success("Produk berhasil ditambahkan")
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error creating product:", error)
-            toast.error("Gagal menambah produk")
+            toast.error(error.message || "Gagal menambah produk")
+        } finally {
+            setIsSubmitting(false)
         }
     }
 
@@ -377,11 +390,18 @@ export default function ProductsManagement() {
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                        <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} disabled={isSubmitting}>
                             Batal
                         </Button>
-                        <Button onClick={handleAddProduct} className="gradient-primary">
-                            Tambah Produk
+                        <Button onClick={handleAddProduct} className="gradient-primary" disabled={isSubmitting}>
+                            {isSubmitting ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Menyimpan...
+                                </>
+                            ) : (
+                                "Tambah Produk"
+                            )}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
