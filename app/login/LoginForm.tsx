@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { authService } from "@/services/auth.service"
+import { checkUserRole } from "./actions"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -27,18 +28,14 @@ export default function LoginForm() {
             const { user } = await authService.signIn(email, password)
 
             if (user) {
-                try {
-                    const profile = await authService.getProfile(user.id)
-                    if (profile?.role === 'admin') {
-                        router.push('/admin')
-                        router.refresh()
-                        return
-                    }
-                } catch {
-                    // Profile check failed, redirect to home
-                }
+                // Use reliable server-side role check
+                const role = await checkUserRole()
 
-                router.push('/')
+                if (role === 'admin') {
+                    router.push('/admin')
+                } else {
+                    router.push('/')
+                }
                 router.refresh()
             }
         } catch (err: any) {
