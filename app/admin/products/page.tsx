@@ -56,6 +56,7 @@ export default function ProductsManagement() {
         stock: 0
     })
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [dialogError, setDialogError] = useState("")
 
     const fetchProducts = async () => {
         try {
@@ -102,13 +103,16 @@ export default function ProductsManagement() {
 
     const handleDelete = async (id: string) => {
         if (confirm("Apakah Anda yakin ingin menghapus produk ini?")) {
+            setIsSubmitting(true)
             try {
                 await productService.deleteProduct(id)
                 setProducts(products.filter(p => p.id !== id))
                 toast.success("Produk berhasil dihapus")
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Error deleting product:", error)
-                toast.error("Gagal menghapus produk")
+                toast.error(error.message || "Gagal menghapus produk")
+            } finally {
+                setIsSubmitting(false)
             }
         }
     }
@@ -130,11 +134,12 @@ export default function ProductsManagement() {
 
     const handleAddProduct = async () => {
         if (!formData.name || !formData.category) {
-            toast.error("Nama dan Kategori wajib diisi")
+            setDialogError("Nama dan Kategori wajib diisi")
             return
         }
 
         setIsSubmitting(true)
+        setDialogError("")
         try {
             const newProduct = await productService.createProduct({
                 ...formData,
@@ -154,7 +159,7 @@ export default function ProductsManagement() {
             toast.success("Produk berhasil ditambahkan")
         } catch (error: any) {
             console.error("Error creating product:", error)
-            toast.error(error.message || "Gagal menambah produk")
+            setDialogError(error.message || "Gagal menambah produk. Pastikan Anda memiliki akses admin di database.")
         } finally {
             setIsSubmitting(false)
         }
@@ -288,7 +293,7 @@ export default function ProductsManagement() {
                                     id="edit-price"
                                     type="number"
                                     value={formData.price}
-                                    onChange={(e) => setFormData({ ...formData, price: parseInt(e.target.value) })}
+                                    onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
                                 />
                             </div>
                             <div className="grid gap-2">
@@ -297,7 +302,7 @@ export default function ProductsManagement() {
                                     id="edit-stock"
                                     type="number"
                                     value={formData.stock}
-                                    onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) })}
+                                    onChange={(e) => setFormData({ ...formData, stock: Number(e.target.value) })}
                                 />
                             </div>
                         </div>
@@ -338,6 +343,12 @@ export default function ProductsManagement() {
                             Tambahkan produk baru ke katalog
                         </DialogDescription>
                     </DialogHeader>
+
+                    {dialogError && (
+                        <div className="bg-destructive/15 text-destructive text-sm p-3 rounded-md mb-4">
+                            {dialogError}
+                        </div>
+                    )}
                     <div className="grid gap-4 py-4">
                         <div className="grid gap-2">
                             <Label htmlFor="add-name">Nama Produk</Label>
@@ -355,7 +366,7 @@ export default function ProductsManagement() {
                                     id="add-price"
                                     type="number"
                                     value={formData.price}
-                                    onChange={(e) => setFormData({ ...formData, price: parseInt(e.target.value) })}
+                                    onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
                                     placeholder="50000"
                                 />
                             </div>
@@ -365,7 +376,7 @@ export default function ProductsManagement() {
                                     id="add-stock"
                                     type="number"
                                     value={formData.stock}
-                                    onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) })}
+                                    onChange={(e) => setFormData({ ...formData, stock: Number(e.target.value) })}
                                     placeholder="100"
                                 />
                             </div>
