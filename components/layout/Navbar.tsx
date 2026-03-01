@@ -41,8 +41,7 @@ export default function Navbar() {
                 const { data: { user: authUser } } = await supabase.auth.getUser()
                 if (authUser) {
                     const profile = await authService.getProfile(authUser.id)
-                    const role = await checkUserRole() // Gunakan server action yang lebih pasti
-                    setUser({ ...authUser, ...profile, role, name: profile.full_name || authUser.email })
+                    setUser({ ...authUser, ...profile, name: profile.full_name || authUser.email })
                     setIsAuthenticated(true)
                 } else {
                     setUser(null)
@@ -59,8 +58,7 @@ export default function Navbar() {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (session?.user) {
                 const profile = await authService.getProfile(session.user.id)
-                const role = await checkUserRole()
-                setUser({ ...session.user, ...profile, role, name: profile.full_name || session.user.email })
+                setUser({ ...session.user, ...profile, name: profile.full_name || session.user.email })
                 setIsAuthenticated(true)
             } else {
                 setUser(null)
