@@ -116,7 +116,7 @@ export class AuthService {
     }
 
     /**
-     * Get user profile
+     * Get user profile (auto-creates if missing)
      */
     async getProfile(userId: string) {
         const { data, error } = await this.supabase
@@ -131,20 +131,39 @@ export class AuthService {
         }
 
         if (!data) {
-            console.warn("Profile not found in database for user:", userId)
+            console.warn("Profile not found, auto-creating for user:", userId)
 
-            // Return default profile with 'user' role
-            // Admin role must be set in DB via Supabase Dashboard
-            return {
+            // Get current user info to populate profile
+            const { data: { user } } = await this.supabase.auth.getUser()
+            const newProfile: ProfileInsert = {
                 id: userId,
-                role: 'user',
-                email: '',
-                full_name: null,
-                phone: null,
-                avatar_url: null,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            } as Profile
+                email: user?.email || '',
+                full_name: user?.user_metadata?.full_name || null,
+            }
+
+            // Try to create the profile
+            const { data: created, error: createError } = await this.supabase
+                .from('profiles')
+                .upsert(newProfile)
+                .select()
+                .single()
+
+            if (createError || !created) {
+                console.error("Auto-create profile failed:", createError)
+                // Return default so the app doesn't crash
+                return {
+                    id: userId,
+                    role: 'user',
+                    email: user?.email || '',
+                    full_name: user?.user_metadata?.full_name || null,
+                    phone: null,
+                    avatar_url: null,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                } as Profile
+            }
+
+            return created as Profile
         }
 
         return data as Profile
