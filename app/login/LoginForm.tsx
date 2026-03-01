@@ -30,13 +30,14 @@ export default function LoginForm() {
             if (user) {
                 // Use reliable server-side role check
                 const role = await checkUserRole()
+                setLoading(false)
 
                 if (role === 'admin') {
-                    router.push('/admin')
+                    window.location.href = '/admin'
                 } else {
                     router.push('/')
+                    router.refresh()
                 }
-                router.refresh()
             }
         } catch (err: any) {
             setError(err.message || "Email atau password salah!")
