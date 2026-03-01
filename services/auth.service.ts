@@ -131,39 +131,36 @@ export class AuthService {
         }
 
         if (!data) {
-            console.warn("Profile not found, auto-creating for user:", userId)
-
-            // Get current user info to populate profile
+            // Profile not found — try to auto-create (INSERT only, never overwrite)
             const { data: { user } } = await this.supabase.auth.getUser()
-            const newProfile: ProfileInsert = {
+
+            try {
+                const { data: created } = await this.supabase
+                    .from('profiles')
+                    .insert({
+                        id: userId,
+                        email: user?.email || '',
+                        full_name: user?.user_metadata?.full_name || null,
+                    })
+                    .select()
+                    .single()
+
+                if (created) return created as Profile
+            } catch {
+                // Insert failed (RLS or duplicate) — continue with default
+            }
+
+            // Return safe default (role='user')
+            return {
                 id: userId,
+                role: 'user',
                 email: user?.email || '',
                 full_name: user?.user_metadata?.full_name || null,
-            }
-
-            // Try to create the profile
-            const { data: created, error: createError } = await this.supabase
-                .from('profiles')
-                .upsert(newProfile)
-                .select()
-                .single()
-
-            if (createError || !created) {
-                console.error("Auto-create profile failed:", createError)
-                // Return default so the app doesn't crash
-                return {
-                    id: userId,
-                    role: 'user',
-                    email: user?.email || '',
-                    full_name: user?.user_metadata?.full_name || null,
-                    phone: null,
-                    avatar_url: null,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
-                } as Profile
-            }
-
-            return created as Profile
+                phone: null,
+                avatar_url: null,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            } as Profile
         }
 
         return data as Profile
