@@ -262,9 +262,9 @@ npm run lint
 
 ## 👥 Team
 
-- **Developer**: [Your Name]
-- **Designer**: [Your Name]
-- **Project Manager**: [Your Name]
+- **Developer**: Abib
+- **Designer**: Abib
+- **Project Manager**: Abib
 
 ---
 
@@ -285,7 +285,7 @@ This project is licensed under the MIT License.
 
 <div align="center">
 
-**Made with ❤️ for UAS Project**
+**Made with ❤️ for Gabut & Cari Cuan**
 
 [⬆ Back to Top](#-abibshop---platform-top-up-roblox-terpercaya)
 
