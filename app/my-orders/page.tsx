@@ -1,217 +1,118 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { authService } from "@/services/auth.service"
-import { orderService } from "@/services/order.service"
-import { useRouter } from "next/navigation"
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { ShoppingBag, Loader2, Search, ArrowRight, CheckCircle, Copy, Clock, Key } from "lucide-react"
-import Link from "next/link"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Database } from "@/lib/supabase/database.types"
-
-type Order = Database['public']['Tables']['orders']['Row']
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ShoppingBag, Clock, CheckCircle2, XCircle, ChevronRight, Package, CreditCard } from "lucide-react";
+import Link from "next/link";
 
 export default function MyOrdersPage() {
-    const router = useRouter()
-    const [orders, setOrders] = useState<Order[]>([])
-    const [loading, setLoading] = useState(true)
-    const [searchTerm, setSearchTerm] = useState("")
-    const [copiedId, setCopiedId] = useState<string | null>(null)
+    const [orders, setOrders] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const supabase = createClient();
 
     useEffect(() => {
-        const fetchOrders = async () => {
-            try {
-                const user = await authService.getCurrentUser()
-                if (!user) {
-                    router.push("/login")
-                    return
-                }
-
-                const { orders: allOrders } = await orderService.getOrders()
-                // Filter client side for now as RLS might return everything depending on setup
-                // Ideally backend should filter, but let's be safe
-                const userOrders = allOrders.filter((o: any) => o.user_id === user.id || o.customer_email === user.email)
-
-                // Sort by date desc
-                userOrders.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-
-                setOrders(userOrders)
-            } catch (error) {
-                console.error("Error fetching orders:", error)
-            } finally {
-                setLoading(false)
+        async function fetchOrders() {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                window.location.href = "/login?redirect=/my-orders";
+                return;
             }
+
+            const { data, error } = await supabase
+                .from("orders")
+                .select("*")
+                .eq("user_id", user.id)
+                .order("created_at", { ascending: false });
+
+            if (data) setOrders(data);
+            setLoading(false);
         }
 
-        fetchOrders()
-    }, [router])
+        fetchOrders();
+    }, [supabase]);
 
-    const filteredOrders = orders.filter(order =>
-        order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.product_name.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-
-    const copyToClipboard = (text: string) => {
-        navigator.clipboard.writeText(text)
-        setCopiedId(text)
-        setTimeout(() => setCopiedId(null), 2000)
-    }
-
-    if (loading) {
-        return (
-            <div className="flex h-[50vh] w-full items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-        )
-    }
+    const getStatusBadge = (status: string, paymentStatus: string) => {
+        if (paymentStatus === 'pending') return <Badge variant="outline" className="bg-yellow-50 text-yellow-600 border-yellow-200">Menunggu Pembayaran</Badge>;
+        if (status === 'completed') return <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">Selesai</Badge>;
+        if (status === 'processing') return <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">Diproses</Badge>;
+        if (status === 'cancelled' || status === 'failed') return <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200">Gagal/Batal</Badge>;
+        return <Badge variant="outline">{status}</Badge>;
+    };
 
     return (
-        <div className="min-h-screen bg-muted/40 py-8 lg:py-12">
-            <div className="container px-4 md:px-6 max-w-5xl mx-auto">
-                <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
+        <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
+            <Navbar />
+            <main className="flex-1 container max-w-5xl mx-auto px-4 py-12 ml-auto mr-auto">
+                <div className="flex items-center gap-3 mb-8">
+                    <div className="p-3 bg-primary/10 rounded-2xl">
+                        <ShoppingBag className="w-6 h-6 text-primary" />
+                    </div>
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">Pesanan Saya</h1>
-                        <p className="text-muted-foreground mt-1">
-                            Riwayat pembelian dan status pesanan Anda
-                        </p>
+                        <p className="text-muted-foreground">Riwayat top-up dan pembelian Anda</p>
                     </div>
-                    <Button asChild>
-                        <Link href="/products">
-                            <ShoppingBag className="mr-2 h-4 w-4" />
-                            Belanja Lagi
-                        </Link>
-                    </Button>
                 </div>
 
-                {orders.length === 0 ? (
-                    <Card className="flex flex-col items-center justify-center py-16 text-center animate-scale-in">
-                        <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
-                            <ShoppingBag className="h-8 w-8 text-muted-foreground" />
-                        </div>
-                        <h3 className="text-xl font-semibold mb-2">Belum ada pesanan</h3>
-                        <p className="text-muted-foreground max-w-sm mb-6">
-                            Anda belum melakukan pembelian apapun. Yuk mulai belanja kebutuhan game Anda!
-                        </p>
-                        <Button size="lg" className="gradient-primary hover-lift" asChild>
-                            <Link href="/products">Lihat Produk</Link>
-                        </Button>
+                {loading ? (
+                    <div className="space-y-4">
+                        {[1, 2, 3].map((i) => (
+                            <div key={i} className="h-32 w-full rounded-xl bg-gray-200 dark:bg-gray-800 animate-pulse" />
+                        ))}
+                    </div>
+                ) : orders.length === 0 ? (
+                    <Card className="text-center py-16 border-dashed">
+                        <CardContent className="space-y-4">
+                            <Package className="w-12 h-12 mx-auto text-muted-foreground opacity-20" />
+                            <div className="space-y-1">
+                                <h3 className="text-xl font-semibold">Belum ada pesanan</h3>
+                                <p className="text-muted-foreground">Anda belum pernah melakukan transaksi di AbibShop.</p>
+                            </div>
+                            <Button asChild className="gradient-primary">
+                                <Link href="/products">Mulai Belanja</Link>
+                            </Button>
+                        </CardContent>
                     </Card>
                 ) : (
-                    <div className="space-y-6">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Cari pesanan (ID Order atau Nama Produk)..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10 bg-background"
-                            />
-                        </div>
-
-                        <div className="grid gap-4">
-                            {filteredOrders.map((order, index) => (
-                                <Card key={order.id} className={`overflow-hidden hover:shadow-md transition-shadow animate-slide-up`} style={{ animationDelay: `${index * 0.1}s` }}>
-                                    <div className="p-6">
-                                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                                            <div className="flex flex-col gap-1">
+                    <div className="grid gap-4">
+                        {orders.map((order) => (
+                            <Link key={order.id} href={`/order/${order.order_number}`}>
+                                <Card className="hover:shadow-md transition-all cursor-pointer group border-none shadow-sm overflow-hidden bg-white dark:bg-gray-800">
+                                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary scale-y-0 group-hover:scale-y-100 transition-transform origin-top" />
+                                    <CardContent className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                                                {order.payment_status === 'paid' ? <CheckCircle2 className="w-6 h-6 text-green-500" /> : <Clock className="w-6 h-6 text-yellow-500" />}
+                                            </div>
+                                            <div className="space-y-1">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="font-mono font-bold text-lg">{order.order_number}</span>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-6 w-6"
-                                                        onClick={() => copyToClipboard(order.order_number)}
-                                                    >
-                                                        {copiedId === order.order_number ? (
-                                                            <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-                                                        ) : (
-                                                            <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-                                                        )}
-                                                    </Button>
+                                                    <span className="font-bold text-sm text-muted-foreground">#{order.order_number}</span>
+                                                    {getStatusBadge(order.status, order.payment_status)}
                                                 </div>
-                                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                    <Clock className="h-3.5 w-3.5" />
-                                                    <span>{new Date(order.created_at).toLocaleString('id-ID')}</span>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <Badge
-                                                    className={`
-                                                        ${order.status === 'completed' && 'bg-green-100 text-green-700 hover:bg-green-100 border-green-200'}
-                                                        ${order.status === 'processing' && 'bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200'}
-                                                        ${order.status === 'pending' && 'bg-yellow-100 text-yellow-700 hover:bg-yellow-100 border-yellow-200'}
-                                                        ${order.status === 'cancelled' && 'bg-red-100 text-red-700 hover:bg-red-100 border-red-200'}
-                                                        px-3 py-1 text-xs font-semibold uppercase tracking-wider
-                                                    `}
-                                                    variant="outline"
-                                                >
-                                                    {order.status === 'completed' && "Selesai"}
-                                                    {order.status === 'processing' && "Diproses"}
-                                                    {order.status === 'pending' && "Menunggu Pembayaran"}
-                                                    {order.status === 'cancelled' && "Dibatalkan"}
-                                                    {order.status === 'failed' && "Gagal"}
-                                                </Badge>
+                                                <h3 className="font-bold text-lg">{order.product_name}</h3>
+                                                <p className="text-sm text-muted-foreground">Target: <span className="text-foreground font-medium">{order.game_username}</span></p>
                                             </div>
                                         </div>
 
-                                        <div className="flex flex-col md:flex-row items-start md:items-center gap-4 py-4 border-t border-b border-dashed my-4">
-                                            <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center text-2xl">
-                                                📦
+                                        <div className="flex items-center justify-between md:text-right gap-4">
+                                            <div className="space-y-1">
+                                                <p className="font-bold text-xl text-primary">Rp {Number(order.total_amount).toLocaleString('id-ID')}</p>
+                                                <p className="text-xs text-muted-foreground">{new Date(order.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                                             </div>
-                                            <div className="flex-1">
-                                                <h4 className="font-semibold text-lg">{order.product_name}</h4>
-                                                <p className="text-sm text-muted-foreground">
-                                                    Roblox User: {order.game_username}
-                                                </p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="text-sm text-muted-foreground">Total Pembayaran</p>
-                                                <p className="font-bold text-lg text-primary">
-                                                    Rp {order.total_amount.toLocaleString('id-ID')}
-                                                </p>
-                                            </div>
+                                            <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
                                         </div>
-
-                                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
-                                            <div className="flex items-center gap-4 w-full sm:w-auto">
-                                                {order.payment_method && (
-                                                    <div className="text-xs px-2.5 py-1 rounded-full bg-muted border font-medium uppercase">
-                                                        {order.payment_method}
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div className="flex items-center gap-3 w-full sm:w-auto">
-                                                <Button variant="outline" size="sm" className="flex-1 sm:flex-none" asChild>
-                                                    <Link href={`/order/${order.order_number}`}>
-                                                        Detail Pesanan <ArrowRight className="ml-2 h-3 w-3" />
-                                                    </Link>
-                                                </Button>
-                                                {order.status === 'pending' && (
-                                                    <Button size="sm" className="flex-1 sm:flex-none gradient-primary" asChild>
-                                                        <Link href={`/order/${order.order_number}`}>
-                                                            Bayar Sekarang
-                                                        </Link>
-                                                    </Button>
-                                                )}
-                                                {order.status === 'completed' && (
-                                                    <Button size="sm" variant="secondary" className="flex-1 sm:flex-none" asChild>
-                                                        <Link href={`/products`}>
-                                                            Beli Lagi
-                                                        </Link>
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
+                                    </CardContent>
                                 </Card>
-                            ))}
-                        </div>
+                            </Link>
+                        ))}
                     </div>
                 )}
-            </div>
+            </main>
+            <Footer />
         </div>
-    )
+    );
 }

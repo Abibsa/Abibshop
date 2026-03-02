@@ -190,10 +190,10 @@ export default function CheckoutPage() {
                 paymentMethod: selectedPayment.name
             }
 
-            const result = await processCheckout(checkoutData)
+            const result = await (processCheckout(checkoutData) as any)
 
             if (!result.success) {
-                toast.error(result.error, {
+                toast.error(result.error || "Terjadi kesalahan", {
                     description: "Jika masalah berlanjut, hubungi admin via WhatsApp.",
                     action: {
                         label: "Tanya Admin",
@@ -204,9 +204,16 @@ export default function CheckoutPage() {
                 return
             }
 
+            // ── SUCCESS ──
             clearCart()
-            router.push(`/my-orders`)
-            toast.success("Pesanan berhasil dibuat!")
+            toast.success("Pesanan berhasil dibuat! Mengalihkan ke pembayaran...")
+
+            // Redirect to Tripay Payment URL
+            if (result.paymentUrl) {
+                window.location.href = result.paymentUrl
+            } else {
+                router.push(`/my-orders`)
+            }
 
         } catch (error: any) {
             console.error("Payment error:", error)
