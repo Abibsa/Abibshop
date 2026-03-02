@@ -49,7 +49,7 @@ export default function TestimonialsSection() {
                                     ))}
                                 </div>
                                 <CardDescription className="text-sm md:text-base leading-relaxed relative z-10">
-                                    "{testimonial.text}"
+                                    &quot;{testimonial.text}&quot;
                                 </CardDescription>
                             </CardHeader>
                             <CardFooter className="pt-0">

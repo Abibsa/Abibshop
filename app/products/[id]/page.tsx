@@ -204,7 +204,7 @@ export default function ProductDetailPage() {
                                     </h4>
                                     <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
                                         <li>Masukkan Username Roblox dengan benar</li>
-                                        <li>Klik tombol "Beli Sekarang"</li>
+                                        <li>Klik tombol &quot;Beli Sekarang&quot;</li>
                                         <li>Lakukan pembayaran sesuai instruksi</li>
                                         <li>Tunggu proses selesai (10-30 menit)</li>
                                     </ol>

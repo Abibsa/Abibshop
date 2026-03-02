@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { checkoutLimiter } from "@/lib/rate-limit"
 import { logError } from "@/lib/error-handler"
-import { TripayService } from "@/lib/tripay"
+import { DuitkuService } from "@/lib/duitku"
 import type { Database } from "@/lib/supabase/database.types"
 
 type OrderInsert = Database['public']['Tables']['orders']['Insert']
@@ -147,52 +147,30 @@ export async function processCheckout(data: {
             newOrderIds.push(newOrder.order_number || '')
         }
 
-        // ── Step 2: Create Tripay Transaction ──
-        const totalToPay = data.items.reduce((sum, item, idx) => {
-            // Re-fetch or use calculated totalAmount from the loop might be tricky without shared scope
-            // We'll trust our logic in the loop or re-calculate carefully
-            return sum
-        }, 0)
-
-        // Actually, let's capture the total in the loop
-        let grandTotal = 0
-        const tripayItems: any[] = []
-
-        // Re-calculate to be sure
+        // ── Step 2: SIMULASI PEMBAYARAN INTERNAL ──
+        // Kita gunakan mode simulasi agar flow tetap berjalan tanpa API Gateway
+        let grandTotal = 0;
         for (const item of data.items) {
             const { data: p } = await adminSupabase.from('products').select('price').eq('id', item.productId).single();
-            const price = p?.price || 0;
-            grandTotal += price * item.quantity;
-            tripayItems.push({
-                sku: item.productId,
-                name: item.productName,
-                price: price,
-                quantity: item.quantity
-            });
+            grandTotal += (p?.price || 0) * item.quantity;
         }
 
-        const tripayData = await TripayService.createTransaction({
-            method: data.paymentMethod, // Should be Tripay code like 'QRIS'
-            merchant_ref: newOrderIds[0], // Use first order num as ref
-            amount: grandTotal,
-            customer_name: user?.user_metadata?.full_name || 'Customer',
-            customer_email: data.email,
-            customer_phone: data.whatsapp,
-            order_items: tripayItems
-        });
-
-        // ── Step 3: Update Orders with Tripay Ref ──
+        // Update orders dengan informasi simulasi
         await adminSupabase
             .from('orders')
             .update({
-                tripay_reference: tripayData.reference,
-                payment_code: tripayData.pay_code || tripayData.qr_url,
-                payment_url: tripayData.checkout_url,
-                payment_name: tripayData.payment_name
+                payment_name: data.paymentMethod,
+                payment_status: 'pending',
+                payment_url: `/order/${newOrderIds[0]}`, // Link ke internal invoice
+                metadata: { is_simulation: true }
             })
             .in('id', createdOrderIds);
 
-        return { success: true, orderIds: newOrderIds, paymentUrl: tripayData.checkout_url }
+        return {
+            success: true,
+            orderIds: newOrderIds,
+            paymentUrl: `/order/${newOrderIds[0]}`
+        }
     } catch (error: any) {
         await logError(error, 'critical', {
             action: 'process_checkout',
