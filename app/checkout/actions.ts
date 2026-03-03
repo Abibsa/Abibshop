@@ -13,6 +13,13 @@ type OrderInsert = Database['public']['Tables']['orders']['Insert']
 const MAX_QUANTITY_PER_ITEM = 100
 const MAX_CART_ITEMS = 20
 
+// ─── Helper to generate order number ───
+function generateOrderNumber() {
+    const date = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+    const random = Math.floor(1000 + Math.random() * 9000)
+    return `ORD-${date}-${random}`
+}
+
 // ─── Input Validation ─────────────────────────────────────
 function validateCheckoutInput(data: {
     items: { productId: string, quantity: number, username: string, productName: string }[],
@@ -122,6 +129,7 @@ export async function processCheckout(data: {
 
             // ── Insert order ──
             const orderToInsert: OrderInsert = {
+                order_number: generateOrderNumber(),
                 user_id: user?.id || null,
                 customer_name: user?.user_metadata?.full_name || 'Customer',
                 customer_email: data.email.trim(),
