@@ -140,7 +140,10 @@ export async function processCheckout(data: {
                     p_quantity: item.quantity
                 })
                 await rollbackOrders(adminSupabase, createdOrderIds)
-                return { success: false, error: "Gagal membuat pesanan. Silakan coba lagi." }
+                return {
+                    success: false,
+                    error: `Gagal membuat pesanan: ${orderError?.message || "Terjadi kesalahan internal."}`
+                }
             }
 
             createdOrderIds.push(newOrder.id)
