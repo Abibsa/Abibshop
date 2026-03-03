@@ -40,7 +40,13 @@ export default function LoginForm() {
                 }
             }
         } catch (err: any) {
-            setError(err.message || "Email atau password salah!")
+            console.error("Login Error:", err)
+            const detail = err.message || ""
+            if (detail.includes("unexpected response")) {
+                setError("Server Supabase sedang sibuk atau URL salah. Cek Env Vercel (pastikan URL tanpa tanda miring / di ujung).")
+            } else {
+                setError(detail || "Email atau password salah!")
+            }
             setLoading(false)
         }
     }

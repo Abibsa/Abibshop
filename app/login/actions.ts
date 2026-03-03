@@ -12,11 +12,21 @@ export async function checkUserRole(): Promise<string> {
 
     if (!user) return 'user'
 
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
+    try {
+        const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .maybeSingle()
 
-    return profile?.role || 'user'
+        if (error) {
+            console.error("DEBUG: Role check error:", error)
+            return 'user'
+        }
+
+        return profile?.role || 'user'
+    } catch (e) {
+        console.error("DEBUG: Unexpected error in checkUserRole:", e)
+        return 'user'
+    }
 }
