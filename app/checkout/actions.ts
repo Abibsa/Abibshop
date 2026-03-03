@@ -68,6 +68,19 @@ export async function processCheckout(data: {
     const newOrderIds: string[] = []
     const createdOrderIds: string[] = [] // Track for rollback
 
+    // Ensure profile exists if authenticated
+    if (user) {
+        const { data: profile } = await adminSupabase.from('profiles').select('id').eq('id', user.id).maybeSingle()
+        if (!profile) {
+            await adminSupabase.from('profiles').insert({
+                id: user.id,
+                email: user.email,
+                full_name: user.user_metadata?.full_name || 'Customer',
+                role: 'user'
+            })
+        }
+    }
+
     try {
         for (const item of data.items) {
             // ── Fetch product from DB (server-side truth) ──
@@ -133,7 +146,9 @@ export async function processCheckout(data: {
                 .single()
 
             if (orderError || !newOrder) {
-                console.error("Failed to insert order:", orderError)
+                console.error("CRITICAL CHECKOUT ERROR:", orderError)
+                await logError(orderError, 'error', { action: 'insert_order', userId: user?.id, params: { orderToInsert } })
+
                 // Restore the stock we just decreased
                 await adminSupabase.rpc('restore_stock', {
                     p_product_id: product.id,
@@ -142,7 +157,7 @@ export async function processCheckout(data: {
                 await rollbackOrders(adminSupabase, createdOrderIds)
                 return {
                     success: false,
-                    error: `Gagal membuat pesanan: ${orderError?.message || "Terjadi kesalahan internal."}`
+                    error: `Database Error: ${orderError?.message || orderError?.details || "Gagal masuk ke sistem."} (${orderError?.code || 'no_code'})`
                 }
             }
 
