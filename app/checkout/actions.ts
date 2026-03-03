@@ -185,9 +185,8 @@ export async function processCheckout(data: {
         await adminSupabase
             .from('orders')
             .update({
-                payment_name: data.paymentMethod,
+                payment_method: data.paymentMethod,
                 payment_status: 'pending',
-                payment_url: `/order/${newOrderIds[0]}`, // Link ke internal invoice
                 metadata: { is_simulation: true }
             })
             .in('id', createdOrderIds);
