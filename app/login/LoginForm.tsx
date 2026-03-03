@@ -35,9 +35,9 @@ export default function LoginForm() {
                 if (role === 'admin') {
                     window.location.href = '/admin'
                 } else {
-                    router.push('/')
-                    router.refresh()
+                    window.location.href = '/'
                 }
+                return; // Stop here to prevent catch from firing if redirect takes time
             }
         } catch (err: any) {
             console.error("Login Error:", err)
