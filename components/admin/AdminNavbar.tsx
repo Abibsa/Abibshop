@@ -8,6 +8,7 @@ import {
     Users,
     Package,
     ShoppingCart,
+    Calculator,
     Settings,
     LogOut
 } from "lucide-react"
@@ -41,6 +42,11 @@ export default function AdminNavbar() {
             title: "Pesanan",
             href: "/admin/orders",
             icon: <ShoppingCart className="h-4 w-4" />
+        },
+        {
+            title: "Reward Calculator",
+            href: "/admin/calculator",
+            icon: <Calculator className="h-4 w-4" />
         },
     ]
 

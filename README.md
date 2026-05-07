@@ -212,6 +212,7 @@ abibshop/
 | `/admin` | Dashboard admin | ✅ |
 | `/admin/orders` | Kelola pesanan | ✅ |
 | `/admin/products` | Manajemen produk | ✅ |
+| `/admin/calculator` | Reward Calculator | ✅ |
 | `/admin/users` | Manajemen pengguna | 🚧 |
 
 ---
@@ -257,6 +258,7 @@ npm run lint
 - [ ] WhatsApp Integration (Fonnte/Wablas)
 - [ ] Admin User Management Dashboard
 - [ ] Production Analytics Dashboard
+- [x] **Reward Calculator** - Track Microsoft Rewards progress untuk redeem Robux
 
 ---
 
