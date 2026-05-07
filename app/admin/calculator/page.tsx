@@ -14,18 +14,19 @@ import { ROBUX_TARGETS, Account, calculate } from "@/lib/calculator"
 
 // Custom hook untuk localStorage
 function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T) => void] {
-  const [storedValue, setStoredValue] = useState<T>(() => {
-    if (typeof window === "undefined") {
-      return initialValue
-    }
+  const [storedValue, setStoredValue] = useState<T>(initialValue)
+
+  // Load from localStorage after mount (client-side only)
+  useEffect(() => {
     try {
       const item = window.localStorage.getItem(key)
-      return item ? JSON.parse(item) : initialValue
+      if (item) {
+        setStoredValue(JSON.parse(item))
+      }
     } catch (error) {
       console.error(error)
-      return initialValue
     }
-  })
+  }, [key])
 
   const setValue = (value: T) => {
     try {
@@ -46,6 +47,12 @@ export default function CalculatorPage() {
   const [name, setName] = useState("")
   const [currentPoints, setCurrentPoints] = useState("")
   const [dailyPoints, setDailyPoints] = useState("")
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Prevent hydration mismatch
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   const handleAddAccount = () => {
     if (!name.trim() || !currentPoints || !dailyPoints) {
@@ -116,7 +123,16 @@ export default function CalculatorPage() {
       </Card>
 
       {/* Hasil Kalkulasi */}
-      {accounts.length === 0 ? (
+      {!isMounted ? (
+        <Card className="border-2 shadow-lg">
+          <CardContent className="py-16">
+            <div className="flex flex-col items-center justify-center text-center">
+              <Calculator className="h-16 w-16 text-muted-foreground mb-4 animate-pulse" />
+              <p className="text-muted-foreground text-lg">Loading...</p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : accounts.length === 0 ? (
         <Card className="border-2 shadow-lg">
           <CardContent className="py-16">
             <div className="flex flex-col items-center justify-center text-center">
